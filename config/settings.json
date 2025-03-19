@@ -1,0 +1,46 @@
+{
+    "controls": [
+        [
+            "Z",
+            "Avancer"
+        ],
+        [
+            "S",
+            "Reculer"
+        ],
+        [
+            "Q",
+            "Gauche"
+        ],
+        [
+            "D",
+            "Droite"
+        ],
+        [
+            "V",
+            "Sprint"
+        ],
+        [
+            "ESPACE",
+            "Voler"
+        ],
+        [
+            "SHIFT",
+            "Descendre"
+        ],
+        [
+            "G",
+            "Atterrir"
+        ],
+        [
+            "\u00c9CHAP",
+            "Menu"
+        ],
+        [
+            "F11",
+            "Plein \u00e9cran"
+        ]
+    ],
+    "master_volume": 1.0,
+    "slider_value": 110
+}
