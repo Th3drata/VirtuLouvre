@@ -2776,7 +2776,7 @@ def main_menu():
             quit_game() # Quitter le jeu
 
         
-        pygame.display.flip(60)  # Limiter le framerate global à 60 FPS
+        pygame.display.flip()  # Limiter le framerate global à 60 FPS
 
         # Sauvegarder les contrôles avant de quitter
         if video_capture:
