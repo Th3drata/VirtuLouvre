@@ -3,9 +3,9 @@
 
 # -*- coding: utf-8 -*-
 import pygame  # Importer la bibliothèque Pygame
-import pygame.mixer
-import random
-import time
+import pygame.mixer  # Importer la bibliothèque Pygame mixer
+import random  # Importer la bibliothèque random
+import time  # Importer le module time
 import os  # Importer le module os
 import cv2  # Importer la bibliothèque OpenCV
 from pygame.locals import *  # Importer les constantes Pygame
@@ -13,28 +13,33 @@ from OpenGL.GL import *  # Importer les fonctions OpenGL
 from OpenGL.GLU import *  # Importer les fonctions OpenGL Utility
 import numpy as np  # Importer la bibliothèque NumPy
 import math  # Importer le module math
-import sys
+import sys  # Importer le module sys
 import json  # Importer le module json pour la gestion des fichiers de configuration
 
 pygame.init()  # Initialiser Pygame
-pygame.mixer.init()
+pygame.mixer.init()  # Initialiser le module mixer de Pygame
 
 # Charger et définir l'icône de la fenêtre
-icon = pygame.image.load("src/icons/icon.png")
-pygame.display.set_icon(icon)
+icon = pygame.image.load(
+    os.sep.join(["src", "icons", "icon.png"])
+)  # Charger l'icône de la fenêtre
+pygame.display.set_icon(icon)  # Définir l'icône de la fenêtre
 
-walk_sound_effect = pygame.mixer.Sound("src/media/walk.mp3")
-walk_sound_effect.set_volume(0.5)
+walk_sound_effect = pygame.mixer.Sound(
+    os.sep.join(["src", "media", "walk.mp3"])
+)  # Charger le son de marche
+walk_sound_effect.set_volume(0.5)  # Définir le volume du son de marche
+
 # Centrer la fenêtre
-os.environ["SDL_VIDEO_CENTERED"] = "1"
-last_walk_sound_time = 0
+os.environ["SDL_VIDEO_CENTERED"] = "1"  # Centrer la fenêtre
+last_walk_sound_time = 0  # Initialiser le temps du dernier son de marche
 
 # Couleurs
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-BLUE = (100, 200, 255)
-HOVER_BLUE = (50, 150, 255)
-GREEN = (0, 255, 0)
+WHITE = (255, 255, 255)  # Blanc
+BLACK = (0, 0, 0)  # Noir
+BLUE = (100, 200, 255)  # Bleu
+HOVER_BLUE = (50, 150, 255)  # Bleu clair
+GREEN = (0, 255, 0)  # Vert
 
 
 # Police
@@ -42,8 +47,8 @@ FONT = pygame.font.Font(None, 24)  # Réduit de 36 à 24
 font = pygame.font.Font(None, 24)  # Réduit de 36 à 24
 
 # Taille de la fenêtre
-screenwidth = 2560
-screenheight = 1440
+screenwidth = 2560  # Largeur de la fenêtre
+screenheight = 1440  # Hauteur de la fenêtre
 
 current_state = "game"  # États possibles: "game", "game_menu", "settings"
 slider_value = 110  # Valeur initiale du FOV
@@ -199,7 +204,6 @@ class Player:
             "G": pygame.K_g,
             "ÉCHAP": pygame.K_ESCAPE,
             "F11": pygame.K_F11,
-            # Ajout des touches supplémentaires
             "A": pygame.K_a,
             "B": pygame.K_b,
             "C": pygame.K_c,
@@ -339,12 +343,11 @@ class Player:
                     move_dir += right_dir
                     walk_sound()
 
-        # Normalize combined direction vector if it's not zero
         if np.linalg.norm(move_dir) > 0:
             move_dir = move_dir / np.linalg.norm(move_dir)
             self.velocity += move_dir * current_speed
 
-        # Apply velocity limit
+        # Appliquer la limite de vitesse
         velocity_length = np.linalg.norm(self.velocity)
         if velocity_length > self.max_velocity:
             self.velocity = (self.velocity / velocity_length) * self.max_velocity
@@ -493,7 +496,7 @@ def render_text_to_texture(text, font, color=(255, 255, 0)):
         height,
     )  # Retourner l'identifiant de la texture, la largeur et la hauteur
 
-
+# Fonction pour jouer le son de marche
 def walk_sound():
     global last_walk_sound_time
     current_time = time.time()
@@ -502,24 +505,20 @@ def walk_sound():
         walk_sound_effect.play()
         last_walk_sound_time = current_time
 
-
-# Fonction pour afficher les crédits
-
-
+# Fonction pour dessiner le ciel
 def draw_skybox(texture_id, radius=1000):
-    """Dessine une sphère texturée pour le ciel."""
-    glEnable(GL_TEXTURE_2D)
-    glBindTexture(GL_TEXTURE_2D, texture_id)
+    glEnable(GL_TEXTURE_2D) # Activer la texture
+    glBindTexture(GL_TEXTURE_2D, texture_id) # Lier la texture
 
-    glPushMatrix()
+    glPushMatrix() # Sauvegarder la matrice
     glColor3f(1, 1, 1)  # Couleur blanche pour voir la texture correctement
     gluQuadricTexture(gluNewQuadric(), GL_TRUE)  # Activer la texture sur la sphère
     gluSphere(gluNewQuadric(), radius, 64, 64)  # Dessiner la sphère (rayon, détails)
-    glPopMatrix()
+    glPopMatrix() # Restaurer la matrice
 
     glDisable(GL_TEXTURE_2D)
 
-
+# Fonction pour dessiner les FPS
 def draw_fps(clock, font, screenwidth, screenheight):
     fps = int(clock.get_fps())  # Calculer les FPS
     text = f"FPS: {fps}"  # Texte à afficher
@@ -1073,24 +1072,28 @@ def display_credits(screen, font, back_button_image, event=None):
     return back_rect
 
 
+# Fonction pour quitter le jeu  
 def quit_game():
     pygame.quit()
     sys.exit()
+    subprocess.run(["python", "main.py"])
 
 
+# Fonction pour obtenir les résolutions disponibles
 def size_screen():
     if os.name == "nt":  # Only for Windows
-        from ctypes import windll
+        from ctypes import windll  # Importation de windll pour Windows
 
-        user32 = windll.user32
-        largeur = user32.GetSystemMetrics(0)
-        hauteur = user32.GetSystemMetrics(1)
+        user32 = windll.user32  # Récupération des dimensions de l'écran
+        largeur = user32.GetSystemMetrics(0)  # Largeur de l'écran
+        hauteur = user32.GetSystemMetrics(1)  # Hauteur de l'écran
     else:
         largeur, hauteur = (
             pygame.display.Info().current_w,
             pygame.display.Info().current_h,
-        )
+        )  # Récupération des dimensions de l'écran
 
+    # Liste des résolutions 16:9 disponibles
     resolutions_16_9 = [
         (800, 600),
         (426, 240),
@@ -1106,20 +1109,27 @@ def size_screen():
     ]
 
     return [(w, h) for w, h in resolutions_16_9 if w <= largeur and h <= hauteur] + [
-        (0, 0)
+        (0, 0)  # Résolution par défaut
     ]
 
 
+# Initialisation de Pygame
 pygame.init()
+
+# Récupération des résolutions disponibles
 resolutions = size_screen()
+
+# Index de la résolution actuelle
 current_resolution_index = 0
 
 
+# Fonction pour changer la résolution
 def change_resolution(index):
     global screen, current_resolution_index
     current_resolution_index = index
     width, height = resolutions[index]
 
+    # Si la résolution est (0, 0), passer en plein écran
     if width == 0 and height == 0:
         screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | DOUBLEBUF | OPENGL)
         width, height = pygame.display.Info().current_w, pygame.display.Info().current_h
@@ -1135,8 +1145,8 @@ def change_resolution(index):
     glLoadIdentity()
 
     # Charger les flèches de navigation
-    arrow_left = pygame.image.load("src/Icons/arrow_left.png")
-    arrow_right = pygame.image.load("src/Icons/arrow_right.png")
+    arrow_left = pygame.image.load(os.sep.join(["src", "icons", "arrow_left.png"]))
+    arrow_right = pygame.image.load(os.sep.join(["src", "icons", "arrow_right.png"]))
     arrow_size = (50, 50)
     arrow_left = pygame.transform.scale(arrow_left, arrow_size)
     arrow_right = pygame.transform.scale(arrow_right, arrow_size)
@@ -1151,12 +1161,12 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
     tab_buttons = []
     left_rect = pygame.Rect(0, 0, 0, 0)  # Initialiser avec un rectangle vide
     right_rect = pygame.Rect(0, 0, 0, 0)  # Initialiser avec un rectangle vide
-    volume_slider_rect = pygame.Rect(0, 0, 0, 0)
-    reset_button_rect = pygame.Rect(0, 0, 0, 0)
+    volume_slider_rect = pygame.Rect(0, 0, 0, 0)  # Initialiser avec un rectangle vide
+    reset_button_rect = pygame.Rect(0, 0, 0, 0)  # Initialiser avec un rectangle vide
 
     # Charger les images des flèches
-    arrow_left = pygame.image.load("src/icons/arrow_left.png")
-    arrow_right = pygame.image.load("src/icons/arrow_right.png")
+    arrow_left = pygame.image.load(os.sep.join(["src", "icons", "arrow_left.png"]))
+    arrow_right = pygame.image.load(os.sep.join(["src", "icons", "arrow_right.png"]))
 
     # Fond gris foncé pour tout l'écran
     screen.fill((20, 20, 20))
@@ -1166,20 +1176,21 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
         font = pygame.font.Font(None, 24)
 
     # Dessiner le bouton retour en haut à gauche
-    back_button_rect = back_button_image.get_rect()
+    back_button_rect = back_button_image.get_rect()  # Récupérer le rectangle du bouton
     back_button_rect.topleft = (10, 10)  # Position ajustée pour être plus près du bord
-    screen.blit(back_button_image, back_button_rect)
-    back_rect = back_button_rect
+    screen.blit(back_button_image, back_button_rect)  # Afficher le bouton retour
+    back_rect = back_button_rect  # Mettre à jour la position du bouton retour
 
     # Créer les boutons d'onglets
     tabs = ["Vidéo", "Audio", "Touches"]
-    tab_width, tab_height = 120, 30  # Réduit la largeur et la hauteur des onglets
-    tab_spacing = 10  # Réduit l'espacement entre les onglets
+    tab_width, tab_height = 120, 30  # Dimensions réduites des onglets
+    tab_spacing = 10  # Espacement réduit entre les onglets
     start_x = (
         screen.get_width() - (len(tabs) * (tab_width + tab_spacing) - tab_spacing)
     ) // 2
     start_y = 20
 
+    # Créer les boutons d'onglets
     for i, tab in enumerate(tabs):
         tab_buttons.append(
             tabButton(
@@ -1195,6 +1206,7 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
         )
         tab_buttons[i].draw(screen)
 
+    # Afficher le contenu correspondant à l'onglet actif
     if current_tab == "Vidéo":
         # Case pour les dimensions
         case_width = 300  # Réduit la largeur de la case
@@ -1315,6 +1327,7 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
             else:
                 input_active = False
 
+        # Gestion de la saisie de texte pour le FOV
         if event and event.type == pygame.KEYDOWN:
             if input_active:
                 if event.key == pygame.K_RETURN:
@@ -1337,6 +1350,7 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
         # Afficher le texte en cours de saisie si actif
         pygame.draw.rect(screen, (60, 60, 60), fov_number_rect)
 
+        # Afficher le texte en cours de saisie si actif
         if input_active:
             input_surface = font.render(input_text + "°", True, (0, 200, 255))
             screen.blit(input_surface, fov_number_rect)
@@ -1361,6 +1375,7 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
                 slider_value = int(60 + (percentage * 60))  # 60° à 120°
                 save_controls()
 
+    # Cas pour le volume
     elif current_tab == "Audio":
         # Case pour le volume
         case_width = 300  # Réduit la largeur de la case
@@ -1429,33 +1444,35 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
             else:
                 input_active = False
 
-        if event and event.type == pygame.KEYDOWN:
-            if input_active:
+        # Gestion de la saisie de texte pour le volume
+        if event and event.type == pygame.KEYDOWN: 
+            if input_active: 
                 if event.key == pygame.K_RETURN:
                     try:
-                        new_value = int(input_text)
-                        if new_value > 100:
+                        new_value = int(input_text)  # Convertir en entier
+                        if new_value > 100:  # Limite à 100%
                             new_value = 100
-                        elif new_value < 0:
-                            new_value = 0
-                        master_volume = new_value
+                        elif new_value < 0:  # Limite à 0%
+                            new_value = 0  # Limite à 0%
+                        master_volume = new_value  # Mettre à jour le volume
                         walk_sound_effect.set_volume(
                             master_volume / 100
                         )  # Mettre à jour le volume du son
-                        save_controls()
+                        save_controls()  # Sauvegarder les contrôles
                     except ValueError:
                         pass
                     input_active = False
-                elif event.key == pygame.K_BACKSPACE:
-                    input_text = input_text[:-1]
+                elif event.key == pygame.K_BACKSPACE:  # Effacer le dernier caractère
+                    input_text = input_text[:-1]  # Effacer le dernier caractère
                 elif (
-                    event.unicode.isdigit() and len(input_text) < 3
-                ):  # Limite à 3 chiffres
-                    input_text += event.unicode
+                    event.unicode.isdigit() and len(input_text) < 3  # Limite à 3 chiffres  
+                ):
+                    input_text += event.unicode  # Ajouter le caractère
 
         # Afficher le texte en cours de saisie si actif
         pygame.draw.rect(screen, (60, 60, 60), volume_number_rect)
 
+        # Afficher le texte en cours de saisie si actif
         if input_active:
             input_surface = font.render(input_text + "%", True, (0, 200, 255))
             screen.blit(input_surface, volume_number_rect)
@@ -1471,21 +1488,22 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
             and event.type == pygame.MOUSEBUTTONDOWN
             and volume_slider_rect.collidepoint(event.pos)
         ):
-            is_dragging = True
+            is_dragging = True  # Activer le glisser-déposer
         elif event and event.type == pygame.MOUSEBUTTONUP:
-            is_dragging = False
+            is_dragging = False  # Désactiver le glisser-déposer
         elif event and event.type == pygame.MOUSEMOTION and is_dragging:
-            relative_x = event.pos[0] - volume_slider_rect.x
-            volume_percentage = max(
+            relative_x = event.pos[0] - volume_slider_rect.x  # Calculer la position relative
+            volume_percentage = max( 
                 0.0, min(1.0, relative_x / volume_slider_rect.width)
-            )
+            )  # Calculer le pourcentage de volume
             master_volume = int(volume_percentage * 100)  # Convertir en pourcentage
             walk_sound_effect.set_volume(
                 master_volume / 100
             )  # Mettre à jour le volume du son
-            save_controls()
+            save_controls()  # Sauvegarder les contrôles
 
-    elif current_tab == "Touches":
+    # Cas pour les touches
+    elif current_tab == "Touches": 
         # Bouton de réinitialisation
         reset_button_width = 150  # Réduit la largeur du bouton
         reset_button_height = 30  # Réduit la hauteur du bouton
@@ -1509,16 +1527,16 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
 
         # Dessiner le bouton
         pygame.draw.rect(screen, button_color, reset_button_rect, border_radius=10)
-        reset_text = font.render("Par défaut", True, (255, 255, 255))
-        reset_text_rect = reset_text.get_rect(center=reset_button_rect.center)
-        screen.blit(reset_text, reset_text_rect)
+        reset_text = font.render("Par défaut", True, (255, 255, 255))  # Texte du bouton
+        reset_text_rect = reset_text.get_rect(center=reset_button_rect.center)  # Position du texte
+        screen.blit(reset_text, reset_text_rect)  # Afficher le texte
 
         # Position de départ pour les contrôles
-        start_y = 300
+        start_y = 300  # Position de départ pour les contrôles
         frame_width = 400  # Réduit la largeur du cadre
-        frame_height = len(controls) * spacing + 40
-        frame_x = (screen.get_width() - frame_width) // 2
-        frame_y = start_y - 20
+        frame_height = len(controls) * spacing + 40  # Calculer la hauteur du cadre
+        frame_x = (screen.get_width() - frame_width) // 2  # Calculer la position x du cadre
+        frame_y = start_y - 20  # Calculer la position y du cadre
 
         # Dessiner le cadre principal avec coins arrondis
         pygame.draw.rect(
@@ -1526,7 +1544,7 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
             (40, 40, 40),
             (frame_x, frame_y, frame_width, frame_height),
             border_radius=15,
-        )
+        )  # Dessiner le cadre principal avec coins arrondis
 
         # Ajouter un effet de bordure lumineuse
         pygame.draw.rect(
@@ -1535,15 +1553,15 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
             (frame_x, frame_y, frame_width, frame_height),
             2,
             border_radius=15,
-        )
+        )  # Ajouter un effet de bordure lumineuse
 
         # Afficher chaque contrôle
         for i, (key, action) in enumerate(controls):
             # Créer un cadre individuel pour chaque contrôle
-            control_frame_x = frame_x + 20
-            control_frame_y = frame_y + 20 + i * spacing
-            control_frame_width = frame_width - 40
-            control_frame_height = 30
+            control_frame_x = frame_x + 20  # Position x du cadre
+            control_frame_y = frame_y + 20 + i * spacing  # Position y du cadre
+            control_frame_width = frame_width - 40  # Largeur du cadre
+            control_frame_height = 30  # Hauteur du cadre
 
             # Dessiner le cadre individuel avec un effet de profondeur
             pygame.draw.rect(
@@ -1556,7 +1574,7 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
                     control_frame_height,
                 ),
                 border_radius=8,
-            )
+            )  # Dessiner le cadre individuel avec un effet de profondeur
 
             # Ajouter un effet de surbrillance subtil
             pygame.draw.rect(
@@ -1567,36 +1585,37 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
                     control_frame_y,
                     control_frame_width,
                     control_frame_height,
-                ),
+                ),  
                 1,
                 border_radius=8,
-            )
+            )  # Ajouter un effet de surbrillance subtil
 
             # Touche (à droite)
             key_text = font.render(
                 "..." if waiting_for_key == i else key,
                 True,
                 (0, 200, 255) if key != "ÉCHAP" else (100, 100, 100),
-            )
+            )  # Texte de la touche
             key_rect = key_text.get_rect(
                 center=(
                     control_frame_x + control_frame_width - 30,
                     control_frame_y + control_frame_height // 2,
-                )
+                )  # Position du texte
             )
-            screen.blit(key_text, key_rect)
+            screen.blit(key_text, key_rect)  # Afficher le texte
 
             # Action (à gauche)
             action_text = font.render(
                 action, True, (255, 255, 255) if key != "ÉCHAP" else (150, 150, 150)
-            )
+            )  # Texte de l'action
             action_rect = action_text.get_rect(
                 midleft=(
                     control_frame_x + 10,
                     control_frame_y + control_frame_height // 2,
-                )
-            )
-            screen.blit(action_text, action_rect)
+                )  # Position du texte
+            )  # Afficher le texte
+            screen.blit(action_text, action_rect)  # Afficher le texte
+
 
     return (
         back_rect,
@@ -1607,238 +1626,241 @@ def display_settings(screen, font, back_button_image, current_tab, event=None):
         reset_button_rect,
     )
 
-
+# Fonction pour afficher le chargement
 def draw_loading_screen(screen, progress, font):
     # Effacer l'écran
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     # Configurer la projection orthographique pour le texte
     glMatrixMode(GL_PROJECTION)
-    glPushMatrix()
-    glLoadIdentity()
-    glOrtho(0, screen.get_width(), screen.get_height(), 0, -1, 1)
+    glPushMatrix()  # Sauvegarder la matrice de projection
+    glLoadIdentity()  # Réinitialiser la matrice de projection
+    glOrtho(0, screen.get_width(), screen.get_height(), 0, -1, 1)  # Définir la projection orthographique
 
-    glMatrixMode(GL_MODELVIEW)
-    glPushMatrix()
-    glLoadIdentity()
+    glMatrixMode(GL_MODELVIEW)  # Changer le mode de projection
+    glPushMatrix()  # Sauvegarder la matrice de projection
+    glLoadIdentity()  # Réinitialiser la matrice de projection
 
     # Désactiver le test de profondeur pour le texte
-    glDisable(GL_DEPTH_TEST)
+    glDisable(GL_DEPTH_TEST)  # Désactiver le test de profondeur
 
     # Activer le blending pour la transparence
-    glEnable(GL_BLEND)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    glEnable(GL_BLEND)  # Activer le blending
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)  # Définir le mode de blending
 
     # Dessiner le fond noir
-    glColor4f(0.0, 0.0, 0.0, 1.0)
-    glBegin(GL_QUADS)
-    glVertex2f(0, 0)
-    glVertex2f(screen.get_width(), 0)
-    glVertex2f(screen.get_width(), screen.get_height())
-    glVertex2f(0, screen.get_height())
-    glEnd()
+    glColor4f(0.0, 0.0, 0.0, 1.0)  # Définir la couleur du fond
+    glBegin(GL_QUADS)  # Dessiner un rectangle
+    glVertex2f(0, 0)  # Dessiner le coin supérieur gauche
+    glVertex2f(screen.get_width(), 0)  # Dessiner le coin supérieur droit
+    glVertex2f(screen.get_width(), screen.get_height())  # Dessiner le coin inférieur droit
+    glVertex2f(0, screen.get_height())  # Dessiner le coin inférieur gauche
+    glEnd()  # Terminer le dessin
 
     # Dessiner la barre de progression
-    bar_width = screen.get_width() * 0.6
-    bar_height = 20
-    bar_x = (screen.get_width() - bar_width) / 2
-    bar_y = screen.get_height() / 2
+    bar_width = screen.get_width() * 0.6  # Largeur de la barre
+    bar_height = 20  # Hauteur de la barre
+    bar_x = (screen.get_width() - bar_width) / 2  # Position x de la barre
+    bar_y = screen.get_height() / 2  # Position y de la barre
 
     # Fond de la barre
-    glColor4f(0.3, 0.3, 0.3, 1.0)
-    glBegin(GL_QUADS)
-    glVertex2f(bar_x, bar_y)
-    glVertex2f(bar_x + bar_width, bar_y)
-    glVertex2f(bar_x + bar_width, bar_y + bar_height)
-    glVertex2f(bar_x, bar_y + bar_height)
-    glEnd()
+    glColor4f(0.3, 0.3, 0.3, 1.0)  # Définir la couleur du fond
+    glBegin(GL_QUADS)  # Dessiner un rectangle
+    glVertex2f(bar_x, bar_y)  # Dessiner le coin supérieur gauche
+    glVertex2f(bar_x + bar_width, bar_y)  # Dessiner le coin supérieur droit
+    glVertex2f(bar_x + bar_width, bar_y + bar_height)  # Dessiner le coin inférieur droit
+    glVertex2f(bar_x, bar_y + bar_height)  # Dessiner le coin inférieur gauche
+    glEnd()  # Terminer le dessin
 
     # Barre de progression
-    glColor4f(0.0, 0.7, 1.0, 1.0)
-    glBegin(GL_QUADS)
-    glVertex2f(bar_x, bar_y)
-    glVertex2f(bar_x + bar_width * progress, bar_y)
-    glVertex2f(bar_x + bar_width * progress, bar_y + bar_height)
-    glVertex2f(bar_x, bar_y + bar_height)
-    glEnd()
+    glColor4f(0.0, 0.7, 1.0, 1.0)  # Définir la couleur de la barre
+    glBegin(GL_QUADS)  # Dessiner un rectangle
+    glVertex2f(bar_x, bar_y)  # Dessiner le coin supérieur gauche
+    glVertex2f(bar_x + bar_width * progress, bar_y)  # Dessiner le coin supérieur droit
+    glVertex2f(bar_x + bar_width * progress, bar_y + bar_height)  # Dessiner le coin inférieur droit
+    glVertex2f(bar_x, bar_y + bar_height)  # Dessiner le coin inférieur gauche
+    glEnd()  # Terminer le dessin
 
     # Texte de chargement
-    loading_text = f"Chargement : {int(progress * 100)}%"
+    loading_text = f"Chargement : {int(progress * 100)}%"  # Texte de chargement
     texture_id, width, height = render_text_to_texture(
-        loading_text, font, (255, 255, 255)
+        loading_text, font, (255, 255, 255)  # Définir la couleur du texte
     )
 
-    glEnable(GL_TEXTURE_2D)
-    glBindTexture(GL_TEXTURE_2D, texture_id)
-    glColor4f(1.0, 1.0, 1.0, 1.0)
+    glEnable(GL_TEXTURE_2D)  # Activer le texte
+    glBindTexture(GL_TEXTURE_2D, texture_id)  # Associer la texture
+    glColor4f(1.0, 1.0, 1.0, 1.0)  # Définir la couleur du texte
 
-    text_x = (screen.get_width() - width) / 2
-    text_y = bar_y - 40
+    text_x = (screen.get_width() - width) / 2  # Position x du texte
+    text_y = bar_y - 40  # Position y du texte
 
-    glBegin(GL_QUADS)
-    glTexCoord2f(0, 0)
-    glVertex2f(text_x, text_y)
-    glTexCoord2f(1, 0)
-    glVertex2f(text_x + width, text_y)
-    glTexCoord2f(1, 1)
-    glVertex2f(text_x + width, text_y + height)
-    glTexCoord2f(0, 1)
-    glVertex2f(text_x, text_y + height)
-    glEnd()
+    glBegin(GL_QUADS)  # Dessiner un rectangle
+    glTexCoord2f(0, 0)  # Coordonnées de la texture
+    glVertex2f(text_x, text_y)  # Dessiner le coin supérieur gauche
+    glTexCoord2f(1, 0)  # Coordonnées de la texture
+    glVertex2f(text_x + width, text_y)  # Dessiner le coin supérieur droit
+    glTexCoord2f(1, 1)  # Coordonnées de la texture
+    glVertex2f(text_x + width, text_y + height)  # Dessiner le coin inférieur droit
+    glTexCoord2f(0, 1)  # Coordonnées de la texture
+    glVertex2f(text_x, text_y + height)  # Dessiner le coin inférieur gauche
+    glEnd()  # Terminer le dessin
 
-    glDisable(GL_TEXTURE_2D)
+    glDisable(GL_TEXTURE_2D)  # Désactiver le texte
 
     # Restaurer les états OpenGL
-    glMatrixMode(GL_PROJECTION)
-    glPopMatrix()
-    glMatrixMode(GL_MODELVIEW)
-    glPopMatrix()
+    glMatrixMode(GL_PROJECTION)  # Changer le mode de projection
+    glPopMatrix()  # Restaurer la matrice de projection
+    glMatrixMode(GL_MODELVIEW)  # Changer le mode de projection
+    glPopMatrix()  # Restaurer la matrice de projection
 
-    pygame.display.flip()
+    pygame.display.flip()  # Actualiser l'affichage
 
-
+# Fonction pour dessiner un rectangle arrondi rempli en OpenGL
 def draw_rounded_rect(x, y, width, height, radius, color):
-    """Dessine un rectangle arrondi rempli en OpenGL."""
-    glColor4f(*color)
+    glColor4f(*color)  # Définir la couleur
 
     # Dessiner le corps principal
-    glBegin(GL_QUADS)
-    glVertex2f(x + radius, y)
-    glVertex2f(x + width - radius, y)
-    glVertex2f(x + width - radius, y + height)
-    glVertex2f(x + radius, y + height)
-    glEnd()
+    glBegin(GL_QUADS)  # Dessiner un rectangle
+    glVertex2f(x + radius, y)  # Dessiner le coin supérieur gauche
+    glVertex2f(x + width - radius, y)  # Dessiner le coin supérieur droit
+    glVertex2f(x + width - radius, y + height)  # Dessiner le coin inférieur droit
+    glVertex2f(x + radius, y + height)  # Dessiner le coin inférieur gauche
+    glEnd()  # Terminer le dessin
 
     # Dessiner les coins arrondis
     segments = 32  # Nombre de segments pour chaque coin
-    for i in range(segments):
-        angle = 2.0 * math.pi * i / segments
+    for i in range(segments): 
+        angle = 2.0 * math.pi * i / segments # Calculer l'angle pour chaque segment
 
         # Coin supérieur gauche
-        glBegin(GL_TRIANGLES)
-        glVertex2f(x + radius, y + radius)
+        glBegin(GL_TRIANGLES)  # Dessiner un triangle
+        glVertex2f(x + radius, y + radius)  # Dessiner le coin supérieur gauche 
         glVertex2f(
             x + radius + radius * math.cos(angle), y + radius + radius * math.sin(angle)
-        )
+        )  # Dessiner le coin supérieur droit   
         glVertex2f(
             x + radius + radius * math.cos(angle + 2.0 * math.pi / segments),
             y + radius + radius * math.sin(angle + 2.0 * math.pi / segments),
-        )
-        glEnd()
+        )  # Dessiner le coin inférieur droit   
+        glEnd()  # Terminer le dessin
 
         # Coin supérieur droit
-        glBegin(GL_TRIANGLES)
-        glVertex2f(x + width - radius, y + radius)
+        glBegin(GL_TRIANGLES)  # Dessiner un triangle   
+        glVertex2f(x + width - radius, y + radius)  # Dessiner le coin supérieur droit
         glVertex2f(
             x + width - radius + radius * math.cos(angle),
             y + radius + radius * math.sin(angle),
-        )
+        )  # Dessiner le coin supérieur droit
         glVertex2f(
             x + width - radius + radius * math.cos(angle + 2.0 * math.pi / segments),
             y + radius + radius * math.sin(angle + 2.0 * math.pi / segments),
-        )
-        glEnd()
+        )  # Dessiner le coin inférieur droit
+        glEnd()  # Terminer le dessin
 
         # Coin inférieur gauche
-        glBegin(GL_TRIANGLES)
-        glVertex2f(x + radius, y + height - radius)
+        glBegin(GL_TRIANGLES)  # Dessiner un triangle
+        glVertex2f(x + radius, y + height - radius)  # Dessiner le coin inférieur gauche
         glVertex2f(
             x + radius + radius * math.cos(angle),
             y + height - radius + radius * math.sin(angle),
-        )
-        glVertex2f(
+        )  # Dessiner le coin supérieur droit   
+        glVertex2f( 
             x + radius + radius * math.cos(angle + 2.0 * math.pi / segments),
             y + height - radius + radius * math.sin(angle + 2.0 * math.pi / segments),
-        )
-        glEnd()
+        )  # Dessiner le coin inférieur droit
+        glEnd()  # Terminer le dessin
 
         # Coin inférieur droit
-        glBegin(GL_TRIANGLES)
-        glVertex2f(x + width - radius, y + height - radius)
+        glBegin(GL_TRIANGLES)  # Dessiner un triangle
+        glVertex2f(x + width - radius, y + height - radius)  # Dessiner le coin inférieur droit
         glVertex2f(
             x + width - radius + radius * math.cos(angle),
             y + height - radius + radius * math.sin(angle),
-        )
+        )  # Dessiner le coin supérieur droit
         glVertex2f(
             x + width - radius + radius * math.cos(angle + 2.0 * math.pi / segments),
             y + height - radius + radius * math.sin(angle + 2.0 * math.pi / segments),
-        )
-        glEnd()
+        )  # Dessiner le coin inférieur droit
+        glEnd()  # Terminer le dessin
 
-
+# Fonction pour afficher une barre de chargement arrondie avec texte
 def draw_loading_bar(screen, font, progress):
-    """Affiche une barre de chargement arrondie avec texte."""
-    bar_x, bar_y = screen.get_width() * 0.2, screen.get_height() * 0.5
-    bar_width, bar_height = screen.get_width() * 0.6, 30
-    radius = 15  # Augmenté de 10 à 15 pour des coins plus arrondis
+    bar_x, bar_y = screen.get_width() * 0.2, screen.get_height() * 0.5  # Position x et y de la barre
+    bar_width, bar_height = screen.get_width() * 0.6, 30  # Largeur et hauteur de la barre
+    radius = 15  # Rayon des coins arrondis
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    glLoadIdentity()
-    glOrtho(0, screen.get_width(), screen.get_height(), 0, -1, 1)
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)  # Effacer l'écran
+    glLoadIdentity()  # Réinitialiser la matrice de projection
+    glOrtho(0, screen.get_width(), screen.get_height(), 0, -1, 1)  # Définir la projection orthographique
 
     # Dessiner la barre de fond (grise)
-    draw_rounded_rect(bar_x, bar_y, bar_width, bar_height, radius, (0.3, 0.3, 0.3, 1.0))
+    draw_rounded_rect(bar_x, bar_y, bar_width, bar_height, radius, (0.3, 0.3, 0.3, 1.0))  # Dessiner la barre de fond (grise)
 
     # Dessiner la barre de progression (bleue)
     draw_rounded_rect(
-        bar_x, bar_y, bar_width * progress, bar_height, radius, (0.0, 0.5, 1.0, 1.0)
+        bar_x, bar_y, bar_width * progress, bar_height, radius, (0.0, 0.5, 1.0, 1.0)  # Dessiner la barre de progression (bleue)
     )
 
     # Afficher le texte "Chargement : ... %"
-    percentage_text = f"Chargement : {int(progress * 100)}%"
+    percentage_text = f"Chargement : {int(progress * 100)}%"  # Texte de chargement
     texture_id, text_width, text_height = render_text_to_texture(
-        percentage_text, font, (255, 255, 255)
+        percentage_text, font, (255, 255, 255)  # Définir la couleur du texte
     )
-    text_x = (screen.get_width() - text_width) / 2
-    text_y = bar_y - 40
+    text_x = (screen.get_width() - text_width) / 2  # Position x du texte
+    text_y = bar_y - 40  # Position y du texte
 
-    glEnable(GL_TEXTURE_2D)
-    glBindTexture(GL_TEXTURE_2D, texture_id)
-    glColor4f(1.0, 1.0, 1.0, 1.0)
-    glBegin(GL_QUADS)
-    glTexCoord2f(0, 1)
-    glVertex2f(text_x, text_y)
-    glTexCoord2f(1, 1)
-    glVertex2f(text_x + text_width, text_y)
-    glTexCoord2f(1, 0)
-    glVertex2f(text_x + text_width, text_y + text_height)
-    glTexCoord2f(0, 0)
-    glVertex2f(text_x, text_y + text_height)
-    glEnd()
-    glDisable(GL_TEXTURE_2D)
+    glEnable(GL_TEXTURE_2D)  # Activer le texte
+    glBindTexture(GL_TEXTURE_2D, texture_id)  # Associer la texture
+    glColor4f(1.0, 1.0, 1.0, 1.0)  # Définir la couleur du texte
+    glBegin(GL_QUADS)  # Dessiner un rectangle
+    glTexCoord2f(0, 1)  # Coordonnées de la texture
+    glVertex2f(text_x, text_y)  # Dessiner le coin supérieur gauche
+    glTexCoord2f(1, 1)  # Coordonnées de la texture
+    glVertex2f(text_x + text_width, text_y)  # Dessiner le coin supérieur droit
+    glTexCoord2f(1, 0)  # Coordonnées de la texture
+    glVertex2f(text_x + text_width, text_y + text_height)  # Dessiner le coin inférieur droit
+    glTexCoord2f(0, 0)  # Coordonnées de la texture
+    glVertex2f(text_x, text_y + text_height)  # Dessiner le coin inférieur gauche
+    glEnd()  # Terminer le dessin
+    glDisable(GL_TEXTURE_2D)  # Désactiver le texte
 
-    pygame.display.flip()
+    pygame.display.flip()  # Actualiser l'affichage
 
-
+# Fonction pour commencer le jeu
 def start_game(screen, font, background_image, dimensions_possibles, current_state):
-    global master_volume, video_capture, current_tab, waiting_for_key, slider_value, controls, frame_x, frame_y, frame_width, frame_height, spacing, is_dragging, input_active, input_text
+    global master_volume, video_capture, current_tab, waiting_for_key, slider_value, controls, frame_x, frame_y, frame_width, frame_height, spacing, is_dragging, input_active, input_text  # Variables globales
 
     # Charger les paramètres sauvegardés avant l'initialisation
-    load_controls()
+    load_controls()  # Charger les paramètres sauvegardés
 
     # Variables pour le menu de paramètres
-    current_tab = "Vidéo"
-    waiting_for_key = None
-    frame_width = 600
-    frame_height = 400
-    spacing = 50
-    is_dragging = False
-    input_active = False
-    input_text = ""
+    current_tab = "Vidéo"  # Onglet sélectionné par défaut
+    waiting_for_key = None  # Touche en attente
+    frame_width = 600  # Largeur du cadre
+    frame_height = 400  # Hauteur du cadre
+    spacing = 50  # Espacement entre les contrôles
+    is_dragging = False  # Indicateur de glissement
+    input_active = False  # Indicateur de texte en cours de saisie
+    input_text = ""  # Texte en cours de saisie
 
     # Chargement des ressources
-    back_button_image = pygame.image.load("src/icons/back_arrow.png")
-    back_button_image = pygame.transform.scale(back_button_image, (30, 30))
+    back_button_image = pygame.image.load(
+        os.sep.join(["src", "icons", "back_arrow.png"])
+    )  # Charger l'image du bouton retour
+    back_button_image = pygame.transform.scale(back_button_image, (30, 30))  # Redimensionner l'image du bouton retour
 
     pygame.init()  # Initialiser Pygame
-    clock = pygame.time.Clock()
+    clock = pygame.time.Clock()  # Initialiser le chronomètre
+
     # Charger la vidéo de fond
-    local_video_path = "src/media/bg.mp4"
-    video_capture = load_local_video(local_video_path)
+    local_video_path = os.sep.join(["src", "media", "bg.mp4"])
+    video_capture = load_local_video(local_video_path)  # Charger la vidéo de fond
 
     # Charger l'image du bouton retour
-    back_button_image = pygame.image.load("src/icons/back_arrow.png").convert_alpha()
-    back_button_image = pygame.transform.scale(back_button_image, (50, 50))
+    back_button_image = pygame.image.load(
+        os.sep.join(["src", "icons", "back_arrow.png"])
+    ).convert_alpha()  # Charger l'image du bouton retour
+    back_button_image = pygame.transform.scale(back_button_image, (50, 50))  # Redimensionner l'image du bouton retour
 
     pygame.font.init()  # Initialiser la police
     display = dimensions_possibles[
@@ -1848,8 +1870,8 @@ def start_game(screen, font, background_image, dimensions_possibles, current_sta
         display, DOUBLEBUF | OPENGL
     )  # Créer la fenêtre Pygame
     pygame.display.set_caption("VirtuLouvre")  # Titre de la fenêtre
-    start_time = time.time()
-    loading_duration = 5
+    start_time = time.time()  # Démarrer le chronomètre
+    loading_duration = 5  # Durée de chargement en secondes
 
     vertices, texcoords, faces = [], [], []
     model_vbo, model_vertex_count, texture_id, floor_texture, sky_texture = (
@@ -1858,224 +1880,224 @@ def start_game(screen, font, background_image, dimensions_possibles, current_sta
         None,
         None,
         None,
-    )
+    )  # Initialiser les variables VBO et textures
 
     while True:
-        elapsed = time.time() - start_time
-        progress = min(elapsed / loading_duration, 1.0)
+        elapsed = time.time() - start_time  # Calculer le temps écoulé
+        progress = min(elapsed / loading_duration, 1.0)  # Calculer la progression
 
-        if progress >= 0.1 and not vertices:
-            vertices, texcoords, faces = load_obj("src/models/Untitled.obj")
-        if progress >= 0.3 and not model_vbo:
+        if progress >= 0.1 and not vertices:  # Charger le modèle
+            vertices, texcoords, faces = load_obj(
+                os.sep.join(["src", "models", "Untitled.obj"])
+            )  # Charger le modèle
+        if progress >= 0.3 and not model_vbo:  # Créer le VBO du modèle
             model_vbo, model_vertex_count = create_model_vbo(vertices, texcoords, faces)
-        if progress >= 0.5 and not texture_id:
-            texture_id = load_texture("src/textures/texture.png")
-        if progress >= 0.7 and not floor_texture:
-            floor_texture = load_texture("src/textures/sol.png")
-        if progress >= 0.9 and not sky_texture:
-            sky_texture = load_texture("src/textures/sky.png")
+        if progress >= 0.5 and not texture_id:  # Charger la texture
+            texture_id = load_texture(os.sep.join(["src", "textures", "texture.png"]))
+        if progress >= 0.7 and not floor_texture:  # Charger la texture du sol
+            floor_texture = load_texture(os.sep.join(["src", "textures", "sol.png"]))
+        if progress >= 0.9 and not sky_texture:  # Charger la texture du ciel   
+            sky_texture = load_texture(os.sep.join(["src", "textures", "sky.png"]))
 
-        draw_loading_bar(screen, font, progress)
+        draw_loading_bar(screen, font, progress)  # Dessiner la barre de chargement
 
-        if progress >= 1.0:
+        if progress >= 1.0:  # Arrêter le chargement
             break
 
     glMatrixMode(GL_MODELVIEW)  # Assure que nous sommes en mode ModelView
-    glLoadIdentity()
-    glScalef(-1, 1, 1)
-    glEnable(GL_CULL_FACE)
-    glCullFace(GL_BACK)
-    glFrontFace(GL_CCW)
+    glLoadIdentity()  # Réinitialiser la matrice de projection 
+    glScalef(-1, 1, 1)  # Inverser l'axe X
+    glEnable(GL_CULL_FACE)  # Activer le masquage des faces cachées
+    glCullFace(GL_BACK)  # Masquer les faces arrière
+    glFrontFace(GL_CCW)  # Définir le sens de la face avant
 
-    glDisable(GL_CULL_FACE)
-    menu_screen = pygame.Surface((display[0], display[1]), pygame.SRCALPHA)
-    slider_value = 110
-    is_dragging = False
+    glDisable(GL_CULL_FACE)  # Désactiver le masquage des faces cachées
+    menu_screen = pygame.Surface((display[0], display[1]), pygame.SRCALPHA)  # Créer une surface transparente
+    slider_value = 110  # Valeur initiale du curseur
+    is_dragging = False  # Indicateur de glissement
 
-    menu_width, menu_height = 600, 400
-    menu_x = (display[0] - menu_width) // 2
-    menu_y = (display[1] - menu_height) // 2
+    menu_width, menu_height = 600, 400  # Largeur et hauteur de la fenêtre du menu
+    menu_x = (display[0] - menu_width) // 2  # Position x de la fenêtre du menu
+    menu_y = (display[1] - menu_height) // 2  # Position y de la fenêtre du menu
 
-    bar_x, bar_y = 200, 300
-    bar_width, bar_height = 420, 20
+    bar_x, bar_y = 200, 300  # Position x et y de la barre de progression
+    bar_width, bar_height = 420, 20  # Largeur et hauteur de la barre de progression
 
-    player = Player(45, (display[0] / display[1]), 0.1, 200)
-    player.apply_projection()
-    glTranslatef(0.0, 0.0, -5)
+    player = Player(45, (display[0] / display[1]), 0.1, 200)  # Créer le joueur
+    player.apply_projection()  # Appliquer la projection
+    glTranslatef(0.0, 0.0, -5)  # Déplacer le joueur
 
-    glEnable(GL_CULL_FACE)
-    glCullFace(GL_BACK)
-    glFrontFace(GL_CCW)
+    glEnable(GL_CULL_FACE)  # Activer le masquage des faces cachées
+    glCullFace(GL_BACK)  # Masquer les faces arrière
+    glFrontFace(GL_CCW)  # Définir le sens de la face avant
 
-    clock = pygame.time.Clock()
+    clock = pygame.time.Clock()  # Initialiser le chronomètre
     font = pygame.font.Font(None, 24)  # Mise à jour de la police ici aussi
 
-    glEnable(GL_BLEND)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    glEnable(GL_BLEND)  # Activer le mélange des couleurs
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)  # Définir le mode de mélange
 
     # Configuration finale
-    pygame.event.set_grab(True)
-    pygame.mouse.set_visible(False)
+    pygame.event.set_grab(True)  # Capturer la souris
+    pygame.mouse.set_visible(False)  # Masquer la souris
 
     # Boucle principale du jeu
     while True:
         delta_time = clock.tick(100) / 1000.0  # Calculer le temps écoulé
-        keys = pygame.key.get_pressed()
+        keys = pygame.key.get_pressed()  # Récupérer les touches pressées
 
         for event in pygame.event.get():  # Pour chaque événement Pygame
             if event.type == pygame.QUIT:  # Si l'événement est de quitter
                 pygame.quit()  # Quitter Pygame
                 return
 
-            if current_state == "settings":
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if fov_slider_rect.collidepoint(event.pos):
-                        is_dragging = True
+            if current_state == "settings":  # Si le jeu est dans le menu des paramètres
+                if event.type == pygame.MOUSEBUTTONDOWN:  # Si l'événement est un clic de la souris
+                    if fov_slider_rect.collidepoint(event.pos):  # Si le clic est sur la barre de progression du FOV
+                        is_dragging = True  # Déplacer le curseur
 
-                    elif event.type == pygame.MOUSEBUTTONUP:
-                        is_dragging = False
-                    elif event.type == pygame.MOUSEMOTION and is_dragging:
-                        relative_x = event.pos[0] - fov_bar_x
-                        fov_percentage = max(0.0, min(1.0, relative_x / fov_bar_width))
-                        slider_value = int(60 + (fov_percentage * 60))
-                        save_controls()
-                    if back_rect.collidepoint(event.pos):
-                        current_state = "settings"
-                    for tab_button in tab_buttons:
-                        if tab_button.is_clicked(event):
-                            current_tab = tab_button.text
-                    if current_tab == "Vidéo":
-                        if left_rect.collidepoint(event.pos):
+                    elif event.type == pygame.MOUSEBUTTONUP:  # Si l'événement est un clic de la souris
+                        is_dragging = False  # Arrêter le déplacement
+                    elif event.type == pygame.MOUSEMOTION and is_dragging:  # Si l'événement est un mouvement de la souris et que le curseur est en train de glisser
+                        relative_x = event.pos[0] - fov_bar_x  # Calculer la position relative du curseur
+                        fov_percentage = max(0.0, min(1.0, relative_x / fov_bar_width))  # Calculer le pourcentage de progression
+                        slider_value = int(60 + (fov_percentage * 60))  # Mettre à jour la valeur du curseur
+                        save_controls()  # Sauvegarder les paramètres
+                    if back_rect.collidepoint(event.pos):  # Si le clic est sur le bouton retour
+                        current_state = "settings"  # Retourner au menu principal
+                    for tab_button in tab_buttons:  # Pour chaque bouton de tabulation
+                        if tab_button.is_clicked(event):  # Si le bouton de tabulation est cliqué
+                            current_tab = tab_button.text  # Changer le tabulation
+                    if current_tab == "Vidéo":  # Si le tabulation est "Vidéo"
+                        if left_rect.collidepoint(event.pos):  # Si le clic est sur le bouton de gauche
                             change_resolution(
                                 (current_resolution_index - 1) % len(resolutions)
-                            )
-                            save_controls()
-                        elif right_rect.collidepoint(event.pos):
+                            )  # Changer la résolution
+                            save_controls()  # Sauvegarder les paramètres
+                        elif right_rect.collidepoint(event.pos):  # Si le clic est sur le bouton de droite
                             change_resolution(
                                 (current_resolution_index + 1) % len(resolutions)
-                            )
-                            save_controls()
+                            )  # Changer la résolution
+                            save_controls()  # Sauvegarder les paramètres
                         # Gestion du FOV
-                        fov_bar_x = (display[0] - 300) // 2 + 150
-                        fov_bar_y = 240
-                        fov_bar_width = 150
-                        fov_bar_height = 8
+                        fov_bar_x = (display[0] - 300) // 2 + 150  # Position x de la barre de progression du FOV
+                        fov_bar_y = 240  # Position y de la barre de progression du FOV
+                        fov_bar_width = 150  # Largeur de la barre de progression du FOV
+                        fov_bar_height = 8  # Hauteur de la barre de progression du FOV
                         fov_slider_rect = pygame.Rect(
                             fov_bar_x, fov_bar_y, fov_bar_width, fov_bar_height
-                        )
-                        # Rectangle pour la détection du clic sur le texte du FOV
+                        )  # Créer le rectangle pour la détection du clic sur le texte du FOV
                         fov_number_rect = pygame.Rect(
                             fov_bar_x + fov_bar_width + 20, fov_bar_y - 10, 60, 30
-                        )
-                        if fov_slider_rect.collidepoint(event.pos):
-                            is_dragging = True
+                        )  # Créer le rectangle pour la détection du clic sur le texte du FOV
+                        if fov_slider_rect.collidepoint(event.pos):  # Si le clic est sur la barre de progression du FOV    
+                            is_dragging = True  # Déplacer le curseur
                             # Mettre à jour immédiatement la valeur du FOV au clic
-                            relative_x = event.pos[0] - fov_bar_x
+                            relative_x = event.pos[0] - fov_bar_x  # Calculer la position relative du curseur
                             fov_percentage = max(
-                                0.0, min(1.0, relative_x / fov_bar_width)
+                                0.0, min(1.0, relative_x / fov_bar_width)  # Calculer le pourcentage de progression
                             )
-                            slider_value = int(60 + (fov_percentage * 60))
-                            save_controls()
-                        elif fov_number_rect.collidepoint(event.pos):
-                            input_active = True
-                            input_text = ""
-                    elif current_tab == "Audio":
+                            slider_value = int(60 + (fov_percentage * 60))  # Mettre à jour la valeur du curseur
+                            save_controls()  # Sauvegarder les paramètres
+                        elif fov_number_rect.collidepoint(event.pos):  # Si le clic est sur le texte du FOV
+                            input_active = True  # Activer le texte
+                            input_text = ""  # Texte en cours de saisie
+                    elif current_tab == "Audio":  # Si le tabulation est "Audio"
                         # Rectangle pour la détection du clic sur le texte du volume
                         volume_number_rect = pygame.Rect(
                             volume_slider_rect.right + 20,
                             volume_slider_rect.y - 10,
                             60,
                             30,
-                        )
-                        if volume_slider_rect.collidepoint(event.pos):
-                            is_dragging = True
-                            relative_x = event.pos[0] - volume_slider_rect.x
+                        )  # Créer le rectangle pour la détection du clic sur le texte du volume    
+                        if volume_slider_rect.collidepoint(event.pos):  # Si le clic est sur la barre de progression du volume
+                            is_dragging = True  # Déplacer le curseur
+                            relative_x = event.pos[0] - volume_slider_rect.x  # Calculer la position relative du curseur
                             master_volume = int(
                                 max(
                                     0.0, min(1.0, relative_x / volume_slider_rect.width)
                                 )
                                 * 100
-                            )
-                            walk_sound_effect.set_volume(master_volume / 100)
-                            save_controls()
-                        elif volume_number_rect.collidepoint(event.pos):
-                            input_active = True
-                            input_text = ""
-                    elif current_tab == "Touches":
-                        if reset_button_rect.collidepoint(event.pos):
-                            controls = DEFAULT_CONTROLS.copy()
-                            save_controls()
-                        mouse_x, mouse_y = event.pos
-                        for i, (key, action) in enumerate(controls):
-                            control_frame_x = frame_x + 20
-                            control_frame_y = frame_y + 20 + i * spacing
-                            control_frame_width = frame_width - 40
-                            control_frame_height = 30
+                            )  # Mettre à jour le volume    
+                            walk_sound_effect.set_volume(master_volume / 100)  # Mettre à jour le volume
+                            save_controls()  # Sauvegarder les paramètres
+                        elif volume_number_rect.collidepoint(event.pos):  # Si le clic est sur le texte du volume
+                            input_active = True  # Activer le texte
+                            input_text = ""  # Texte en cours de saisie
+                    elif current_tab == "Touches":  # Si le tabulation est "Touches"
+                        if reset_button_rect.collidepoint(event.pos):  # Si le clic est sur le bouton de réinitialisation
+                            controls = DEFAULT_CONTROLS.copy()  # Réinitialiser les contrôles
+                            save_controls()  # Sauvegarder les paramètres
+                        mouse_x, mouse_y = event.pos  # Récupérer la position de la souris
+                        for i, (key, action) in enumerate(controls):  # Pour chaque contrôle
+                            control_frame_x = frame_x + 20  # Position x du cadre de contrôle
+                            control_frame_y = frame_y + 20 + i * spacing  # Position y du cadre de contrôle
+                            control_frame_width = frame_width - 40  # Largeur du cadre de contrôle
+                            control_frame_height = 30  # Hauteur du cadre de contrôle
 
                             if (
-                                control_frame_x + control_frame_width - 60
-                                <= mouse_x
-                                <= control_frame_x + control_frame_width - 20
-                                and control_frame_y
-                                <= mouse_y
-                                <= control_frame_y + control_frame_height
-                            ) and key != "ÉCHAP":
-                                waiting_for_key = i
-                                break
-                elif event.type == pygame.MOUSEBUTTONUP:
-                    is_dragging = False
-                elif event.type == pygame.MOUSEMOTION and is_dragging:
-                    if current_tab == "Vidéo":
-                        fov_bar_x = (display[0] - 300) // 2 + 150
-                        fov_bar_y = 240
-                        fov_bar_width = 150
-                        relative_x = event.pos[0] - fov_bar_x
-                        fov_percentage = max(0.0, min(1.0, relative_x / fov_bar_width))
-                        slider_value = int(60 + (fov_percentage * 60))
-                        save_controls()
+                                control_frame_x + control_frame_width - 60  # Position x du bouton de réinitialisation
+                                <= mouse_x  # Position x de la souris
+                                <= control_frame_x + control_frame_width - 20  # Position x du bouton de réinitialisation
+                                and control_frame_y  # Position y du bouton de réinitialisation
+                                <= mouse_y  # Position y de la souris
+                                <= control_frame_y + control_frame_height  # Position y du bouton de réinitialisation
+                            ) and key != "ÉCHAP":  # Si la touche n'est pas "ÉCHAP"
+                                waiting_for_key = i  # Attendre la touche
+                                break  # Arrêter la boucle
+                elif event.type == pygame.MOUSEBUTTONUP:  # Si l'événement est un clic de la souris
+                    is_dragging = False  # Arrêter le déplacement
+                elif event.type == pygame.MOUSEMOTION and is_dragging:  # Si l'événement est un mouvement de la souris et que le curseur est en train de glisser
+                    if current_tab == "Vidéo":  # Si le tabulation est "Vidéo"
+                        fov_bar_x = (display[0] - 300) // 2 + 150  # Position x de la barre de progression du FOV
+                        fov_bar_y = 240  # Position y de la barre de progression du FOV
+                        fov_bar_width = 150  # Largeur de la barre de progression du FOV
+                        relative_x = event.pos[0] - fov_bar_x  # Calculer la position relative du curseur
+                        fov_percentage = max(0.0, min(1.0, relative_x / fov_bar_width))  # Calculer le pourcentage de progression
+                        slider_value = int(60 + (fov_percentage * 60))  # Mettre à jour la valeur du curseur
+                        save_controls()  # Sauvegarder les paramètres
                     elif current_tab == "Audio" and volume_slider_rect.collidepoint(
                         event.pos
-                    ):
-                        relative_x = event.pos[0] - volume_slider_rect.x
+                    ):  # Si le clic est sur la barre de progression du volume
+                        relative_x = event.pos[0] - volume_slider_rect.x  # Calculer la position relative du curseur    
                         master_volume = int(
                             max(0.0, min(1.0, relative_x / volume_slider_rect.width))
                             * 100
-                        )
-                        walk_sound_effect.set_volume(master_volume / 100)
-                        save_controls()
-                elif event.type == pygame.KEYDOWN:
-                    if input_active:
-                        if event.key == pygame.K_RETURN:
+                        )  # Mettre à jour le volume    
+                        walk_sound_effect.set_volume(master_volume / 100)  # Mettre à jour le volume
+                        save_controls()  # Sauvegarder les paramètres
+                elif event.type == pygame.KEYDOWN:  # Si l'événement est une touche enfoncée
+                    if input_active:  # Si le texte est actif
+                        if event.key == pygame.K_RETURN:  # Si la touche est "Entrée"
                             try:
-                                new_value = int(input_text)
-                                if current_tab == "Vidéo":
-                                    if new_value > 120:
-                                        new_value = 120
-                                    elif new_value < 60:
-                                        new_value = 60
-                                    slider_value = new_value
-                                elif current_tab == "Audio":
-                                    if new_value > 100:
-                                        new_value = 100
-                                    elif new_value < 0:
-                                        new_value = 0
-                                    master_volume = new_value
-                                    walk_sound_effect.set_volume(master_volume / 100)
-                                save_controls()
-                            except ValueError:
-                                pass
-                            input_active = False
-                        elif event.key == pygame.K_BACKSPACE:
-                            input_text = input_text[:-1]
-                        elif event.unicode.isdigit() and len(input_text) < 3:
-                            input_text += event.unicode
-            else:
-                # Pour les autres états, on traite les événements normalement
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
+                                new_value = int(input_text)  # Convertir le texte en valeur
+                                if current_tab == "Vidéo":  # Si le tabulation est "Vidéo"
+                                    if new_value > 120:  # Si la valeur est supérieure à 120
+                                        new_value = 120  # Mettre à jour la valeur
+                                    elif new_value < 60:  # Si la valeur est inférieure à 60
+                                        new_value = 60  # Mettre à jour la valeur
+                                    slider_value = new_value  # Mettre à jour la valeur
+                                elif current_tab == "Audio":  # Si le tabulation est "Audio"
+                                    if new_value > 100:  # Si la valeur est supérieure à 100
+                                        new_value = 100  # Mettre à jour la valeur
+                                    elif new_value < 0:  # Si la valeur est inférieure à 0
+                                        new_value = 0  # Mettre à jour la valeur
+                                    master_volume = new_value  # Mettre à jour le volume
+                                    walk_sound_effect.set_volume(master_volume / 100)  # Mettre à jour le volume
+                                save_controls()  # Sauvegarder les paramètres
+                            except ValueError:  # Si la valeur n'est pas un nombre
+                                pass  # Passer à la suite
+                            input_active = False  # Désactiver le texte
+                        elif event.key == pygame.K_BACKSPACE:  # Si la touche est "Retour arrière"
+                            input_text = input_text[:-1]  # Supprimer le dernier caractère
+                        elif event.unicode.isdigit() and len(input_text) < 3:  # Si le caractère est un chiffre et que la longueur du texte est inférieure à 3
+                            input_text += event.unicode  # Ajouter le caractère au texte
+            else:  # Pour les autres états
+                if event.type == pygame.KEYDOWN:  # Si l'événement est une touche enfoncée
+                    if event.key == pygame.K_ESCAPE:  # Si la touche est "ÉCHAP"
                         current_state = (
                             "game_menu" if current_state != "game_menu" else "game"
-                        )
+                        )  # Changer l'état du jeu
                         pygame.event.set_grab(
                             current_state != "game_menu"
                         )  # Capturer la souris si menu ouvert
@@ -2083,173 +2105,174 @@ def start_game(screen, font, background_image, dimensions_possibles, current_sta
                             current_state == "game_menu"
                         )  # Afficher le curseur si menu ouvert
                     elif event.key == pygame.K_F11:  # Si la touche est F11
-                        toggle_fullscreen()
-                    elif input_active:
-                        if event.key == pygame.K_RETURN:
+                        toggle_fullscreen()  # Changer le mode plein écran
+                    elif input_active:  # Si le texte est actif 
+                        if event.key == pygame.K_RETURN:  # Si la touche est "Entrée"
                             try:
-                                new_value = int(input_text)
-                                if current_tab == "Vidéo":
-                                    if new_value > 120:
-                                        new_value = 120
-                                    elif new_value < 60:
-                                        new_value = 60
-                                    slider_value = new_value
-                                elif current_tab == "Audio":
-                                    if new_value > 100:
-                                        new_value = 100
-                                    elif new_value < 0:
-                                        new_value = 0
-                                    master_volume = new_value
-                                    walk_sound_effect.set_volume(master_volume / 100)
-                                save_controls()
-                            except ValueError:
-                                pass
-                            input_active = False
-                        elif event.key == pygame.K_BACKSPACE:
-                            input_text = input_text[:-1]
-                        elif event.unicode.isdigit() and len(input_text) < 3:
-                            input_text += event.unicode
+                                new_value = int(input_text)  # Convertir le texte en valeur 
+                                if current_tab == "Vidéo":  # Si le tabulation est "Vidéo"
+                                    if new_value > 120:  # Si la valeur est supérieure à 120
+                                        new_value = 120  # Mettre à jour la valeur
+                                    elif new_value < 60:  # Si la valeur est inférieure à 60
+                                        new_value = 60  # Mettre à jour la valeur
+                                    slider_value = new_value  # Mettre à jour la valeur
+                                elif current_tab == "Audio":  # Si le tabulation est "Audio"
+                                    if new_value > 100:  # Si la valeur est supérieure à 100
+                                        new_value = 100  # Mettre à jour la valeur
+                                    elif new_value < 0:  # Si la valeur est inférieure à 0
+                                        new_value = 0  # Mettre à jour la valeur
+                                    master_volume = new_value  # Mettre à jour le volume
+                                    walk_sound_effect.set_volume(master_volume / 100)  # Mettre à jour le volume
+                                save_controls()  # Sauvegarder les paramètres
+                            except ValueError:  # Si la valeur n'est pas un nombre
+                                pass  # Passer à la suite
+                            input_active = False  # Désactiver le texte
+                        elif event.key == pygame.K_BACKSPACE:  # Si la touche est "Retour arrière"
+                            input_text = input_text[:-1]  # Supprimer le dernier caractère
+                        elif event.unicode.isdigit() and len(input_text) < 3:  # Si le caractère est un chiffre et que la longueur du texte est inférieure à 3
+                            input_text += event.unicode  # Ajouter le caractère au texte    
 
                 # Mettre à jour le joueur uniquement si on est dans l'état "game"
-                if current_state == "game":
-                    if event.type == pygame.MOUSEMOTION:
-                        xoffset, yoffset = event.rel
-                        player.process_mouse(xoffset, -yoffset)
+                if current_state == "game":  # Si le jeu est dans l'état "game"
+                    if event.type == pygame.MOUSEMOTION:  # Si l'événement est un mouvement de la souris    
+                        xoffset, yoffset = event.rel  # Récupérer le déplacement de la souris
+                        player.process_mouse(xoffset, -yoffset)  # Mettre à jour la position du joueur
 
         # Mise à jour du joueur
-        if current_state == "game":
-            player.process_keyboard(keys)
-            player.update(delta_time)
+        if current_state == "game":  # Si le jeu est dans l'état "game"
+            player.process_keyboard(keys)  # Mettre à jour la position du joueur
+            player.update(delta_time)  # Mettre à jour la position du joueur
 
-        # Effacer le tampon
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)  # Effacer le tampon
 
         # Rendu de la scène 3D
-        if current_state in ["game", "game_menu", "game_settings"]:
-            player.apply()
-            player.fov = slider_value
-            player.apply_projection()
+        if current_state in ["game", "game_menu", "game_settings"]:  # Si le jeu est dans l'état "game", "game_menu" ou "game_settings"
+            player.apply()  # Appliquer la projection
+            player.fov = slider_value  # Mettre à jour la valeur du FOV
+            player.apply_projection()  # Appliquer la projection
 
-            glDisable(GL_CULL_FACE)
-            draw_skybox(sky_texture)
-            draw_textured_floor(floor_texture)
+            glDisable(GL_CULL_FACE)  # Désactiver le masquage des faces cachées
+            draw_skybox(sky_texture)  # Dessiner le ciel
+            draw_textured_floor(floor_texture)  # Dessiner le sol
 
-            glEnable(GL_TEXTURE_2D)
-            glBindTexture(GL_TEXTURE_2D, texture_id)
-            draw_model(model_vbo, model_vertex_count)
-            glDisable(GL_TEXTURE_2D)
+            glEnable(GL_TEXTURE_2D)  # Activer le masquage des faces cachées
+            glBindTexture(GL_TEXTURE_2D, texture_id)  # Associer la texture
+            draw_model(model_vbo, model_vertex_count)  # Dessiner le modèle
+            glDisable(GL_TEXTURE_2D)  # Désactiver le masquage des faces cachées
 
-            draw_crosshair(display[0], display[1])
+            draw_crosshair(display[0], display[1])  # Dessiner la cible
 
         # Gestion des différents états
-        if current_state == "game_menu":
-            # Clear the menu overlay
+        if current_state == "game_menu":  # Si le jeu est dans l'état "game_menu"   
+            # Effacer le menu
             menu_screen.fill((0, 0, 0, 0))
 
-            # Draw semi-transparent menu background
+            # Dessiner le fond semi-transparent du menu
             pygame.draw.rect(
-                menu_screen,
+                menu_screen, 
                 (20, 20, 20, 180),
                 (menu_x, menu_y, menu_width, menu_height),
                 border_radius=15,
-            )
+            )  # Dessiner le fond semi-transparent du menu  
 
-            # Define buttons
+            # Définir les boutons
             buttons = [
                 Button(
-                    display[0] // 2 - 100,
-                    display[1] // 2 - 100,
-                    200,
-                    50,
-                    "Resume",
-                    (255, 255, 255),
-                    font,
-                    BLUE,
-                    HOVER_BLUE,
+                    display[0] // 2 - 100, # Position x du bouton
+                    display[1] // 2 - 100, # Position y du bouton
+                    200, # Largeur du bouton
+                    50, # Hauteur du bouton
+                    "Resume", # Texte du bouton
+                    (255, 255, 255), # Couleur du texte
+                    font, # Police du texte
+                    BLUE, # Couleur du bouton
+                    HOVER_BLUE, # Couleur du bouton au survol
                 ),
                 Button(
-                    display[0] // 2 - 100,
-                    display[1] // 2 - 20,
-                    200,
-                    50,
-                    "Settings",
-                    (255, 255, 255),
-                    font,
-                    BLUE,
-                    HOVER_BLUE,
+                    display[0] // 2 - 100, # Position x du bouton
+                    display[1] // 2 - 20, # Position y du bouton
+                    200, # Largeur du bouton
+                    50, # Hauteur du bouton
+                    "Settings", # Texte du bouton
+                    (255, 255, 255), # Couleur du texte
+                    font, # Police du texte
+                    BLUE, # Couleur du bouton
+                    HOVER_BLUE, # Couleur du bouton au survol
                 ),
                 Button(
-                    display[0] // 2 - 100,
-                    display[1] // 2 + 60,
-                    200,
-                    50,
-                    "Quit",
-                    (255, 255, 255),
-                    font,
-                    BLUE,
-                    HOVER_BLUE,
+                    display[0] // 2 - 100, # Position x du bouton
+                    display[1] // 2 + 60, # Position y du bouton
+                    200, # Largeur du bouton
+                    50, # Hauteur du bouton
+                    "Quit", # Texte du bouton
+                    (255, 255, 255), # Couleur du texte
+                    font, # Police du texte
+                    BLUE, # Couleur du bouton
+                    HOVER_BLUE, # Couleur du bouton au survol
                 ),
             ]
 
-            mouse_pos = pygame.mouse.get_pos()
+            mouse_pos = pygame.mouse.get_pos()  # Récupérer la position de la souris
 
-            for button in buttons:
-                button.draw(menu_screen)
-                if pygame.mouse.get_pressed()[0]:
-                    if button.rect.collidepoint(mouse_pos):
-                        if button.text == "Resume":
-                            current_state = "game"
-                            pygame.event.set_grab(True)
-                            pygame.mouse.set_visible(False)
-                        elif button.text == "Settings":
-                            current_state = "game_settings"
-                        elif button.text == "Quit":
-                            quit_game()
+            for button in buttons:  # Pour chaque bouton
+                button.draw(menu_screen)  # Dessiner le bouton
+                if pygame.mouse.get_pressed()[0]:  # Si le bouton gauche de la souris est enfoncé
+                    if button.rect.collidepoint(mouse_pos):  # Si le bouton est enfoncé
+                        if button.text == "Resume":  # Si le texte du bouton est "Resume"
+                            current_state = "game"  # Changer l'état du jeu
+                            pygame.event.set_grab(True)  # Capturer la souris
+                            pygame.mouse.set_visible(False)  # Masquer le curseur
+                        elif button.text == "Settings":  # Si le texte du bouton est "Settings"
+                            current_state = "game_settings"  # Changer l'état du jeu
+                        elif button.text == "Quit":  # Si le texte du bouton est "Quit"
+                            quit_game()  # Quitter le jeu
 
-            # Now use the correct OpenGL method to overlay the 2D menu
-            glMatrixMode(GL_PROJECTION)
-            glPushMatrix()
-            glLoadIdentity()
-            glOrtho(0, display[0], display[1], 0, -1, 1)
+            # Maintenant utiliser la méthode OpenGL correcte pour superposer le menu 2D
+            glMatrixMode(GL_PROJECTION)  # Changer le mode de projection
+            glPushMatrix()  # Sauvegarder la matrice de projection
+            glLoadIdentity()  # Réinitialiser la matrice de projection
+            glOrtho(0, display[0], display[1], 0, -1, 1)  # Définir la projection orthographique
 
-            glMatrixMode(GL_MODELVIEW)
-            glPushMatrix()
-            glLoadIdentity()
+            glMatrixMode(GL_MODELVIEW)  # Changer le mode de vue
+            glPushMatrix()  # Sauvegarder la matrice de vue
+            glLoadIdentity()  # Réinitialiser la matrice de vue
 
-            glDisable(GL_DEPTH_TEST)
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glDisable(GL_DEPTH_TEST)  # Désactiver le test de profondeur
+            glEnable(GL_BLEND)  # Activer le mélange
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)  # Définir le mélange
 
-            menu_texture_data = pygame.image.tostring(menu_screen, "RGBA", True)
-            glWindowPos2d(0, 0)
+            menu_texture_data = pygame.image.tostring(menu_screen, "RGBA", True)  # Récupérer les données de la texture du menu
+            glWindowPos2d(0, 0)  # Définir la position de la texture
             glDrawPixels(
                 display[0], display[1], GL_RGBA, GL_UNSIGNED_BYTE, menu_texture_data
-            )
+            )  # Dessiner la texture
 
-            glMatrixMode(GL_PROJECTION)
-            glPopMatrix()
-            glMatrixMode(GL_MODELVIEW)
-            glPopMatrix()
+            glMatrixMode(GL_PROJECTION)  # Changer le mode de projection
+            glPopMatrix()  # Restaurer la matrice de projection
+            glMatrixMode(GL_MODELVIEW)  # Changer le mode de vue
+            glPopMatrix()  # Restaurer la matrice de vue
 
-            glEnable(GL_DEPTH_TEST)
+            glEnable(GL_DEPTH_TEST)  # Activer le test de profondeur
 
-        elif current_state == "game_settings":
-            # Set up orthographic projection for 2D rendering
-            glMatrixMode(GL_PROJECTION)
-            glPushMatrix()
-            glLoadIdentity()
-            glOrtho(0, display[0], display[1], 0, -1, 1)
+        elif current_state == "game_settings":  # Si le jeu est dans l'état "game_settings"
+            # Définir la projection orthographique pour le rendu 2D
+            glMatrixMode(GL_PROJECTION)  # Changer le mode de projection
+            glPushMatrix()  # Sauvegarder la matrice de projection
+            glLoadIdentity()  # Réinitialiser la matrice de projection
+            glOrtho(0, display[0], display[1], 0, -1, 1)  # Définir la projection orthographique
 
-            glMatrixMode(GL_MODELVIEW)
-            glPushMatrix()
-            glLoadIdentity()
+            glMatrixMode(GL_MODELVIEW)  # Changer le mode de vue
+            glPushMatrix()  # Sauvegarder la matrice de vue
+            glLoadIdentity()  # Réinitialiser la matrice de vue
 
-            glDisable(GL_DEPTH_TEST)
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glDisable(GL_DEPTH_TEST)  # Désactiver le test de profondeur
+            glEnable(GL_BLEND)  # Activer le mélange
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)  # Définir le mélange
 
-            settings_screen = pygame.Surface((display[0], display[1]), pygame.SRCALPHA)
-            settings_screen.fill((0, 0, 0, 180))  # Récupérer tous les événements pygame
+            settings_screen = pygame.Surface((display[0], display[1]), pygame.SRCALPHA)  # Créer une surface pour le rendu 2D
+            settings_screen.fill((0, 0, 0, 180))  # Remplir la surface avec une couleur semi-transparente
+
+            # Récupérer tous les événements pygame
             (
                 back_rect,
                 tab_buttons,
@@ -2257,88 +2280,87 @@ def start_game(screen, font, background_image, dimensions_possibles, current_sta
                 right_rect,
                 volume_slider_rect,
                 reset_button_rect,
-            ) = display_settings(settings_screen, font, back_button_image, current_tab)
+            ) = display_settings(settings_screen, font, back_button_image, current_tab)  # Afficher les paramètres
 
-            settings_texture_data = pygame.image.tostring(settings_screen, "RGBA", True)
-            glWindowPos2d(0, 0)
+            settings_texture_data = pygame.image.tostring(settings_screen, "RGBA", True)  # Récupérer les données de la texture du menu
+            glWindowPos2d(0, 0)  # Définir la position de la texture
             glDrawPixels(
                 display[0], display[1], GL_RGBA, GL_UNSIGNED_BYTE, settings_texture_data
-            )
+            )  # Dessiner la texture
 
-            glMatrixMode(GL_PROJECTION)
-            glPopMatrix()
-            glMatrixMode(GL_MODELVIEW)
-            glPopMatrix()
+            glMatrixMode(GL_PROJECTION)  # Changer le mode de projection
+            glPopMatrix()  # Restaurer la matrice de projection
+            glMatrixMode(GL_MODELVIEW)  # Changer le mode de vue
+            glPopMatrix()  # Restaurer la matrice de vue
 
-            glEnable(GL_DEPTH_TEST)
+            glEnable(GL_DEPTH_TEST)  # Activer le test de profondeur
 
-            # Handle settings events
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if back_rect.collidepoint(event.pos):
-                    current_state = "game_menu"
-                for tab_button in tab_buttons:
-                    if tab_button.is_clicked(event):
-                        current_tab = tab_button.text
-                if current_tab == "Vidéo":
-                    if left_rect.collidepoint(event.pos):
+            # Gestion des événements des paramètres
+            if event.type == pygame.MOUSEBUTTONDOWN:  # Si l'événement est un clic de la souris
+                if back_rect.collidepoint(event.pos):  # Si le bouton retour est enfoncé
+                    current_state = "game_menu"  # Changer l'état du jeu
+                for tab_button in tab_buttons:  # Pour chaque bouton de tabulation
+                    if tab_button.is_clicked(event):  # Si le bouton de tabulation est enfoncé
+                        current_tab = tab_button.text  # Changer le tabulation
+                if current_tab == "Vidéo":  # Si le tabulation est "Vidéo"
+                    if left_rect.collidepoint(event.pos):  # Si le bouton gauche est enfoncé
                         change_resolution(
                             (current_resolution_index - 1) % len(resolutions)
-                        )
-                        save_controls()
-                    elif right_rect.collidepoint(event.pos):
+                        )  # Changer la résolution
+                        save_controls()  # Sauvegarder les paramètres   
+                    elif right_rect.collidepoint(event.pos):  # Si le bouton droit est enfoncé
                         change_resolution(
                             (current_resolution_index + 1) % len(resolutions)
-                        )
-                        save_controls()
+                        )  # Changer la résolution  
+                        save_controls()  # Sauvegarder les paramètres
                     # Gestion du FOV
-                    fov_bar_x = (display[0] - 300) // 2 + 150
-                    fov_bar_y = 240
-                    fov_bar_width = 150
-                    fov_bar_height = 8
+                    fov_bar_x = (display[0] - 300) // 2 + 150  # Position x de la barre de progression du FOV
+                    fov_bar_y = 240  # Position y de la barre de progression du FOV
+                    fov_bar_width = 150  # Largeur de la barre de progression du FOV
+                    fov_bar_height = 8  # Hauteur de la barre de progression du FOV
                     fov_slider_rect = pygame.Rect(
                         fov_bar_x, fov_bar_y, fov_bar_width, fov_bar_height
-                    )
-                    # Rectangle pour la détection du clic sur le texte du FOV
+                    )  # Rectangle pour la détection du clic sur la barre de progression du FOV
                     fov_number_rect = pygame.Rect(
                         fov_bar_x + fov_bar_width + 20, fov_bar_y - 10, 60, 30
-                    )
-                    if fov_slider_rect.collidepoint(event.pos):
-                        is_dragging = True
+                    )  # Rectangle pour la détection du clic sur le texte du FOV
+                    if fov_slider_rect.collidepoint(event.pos):  # Si le clic est sur la barre de progression du FOV
+                        is_dragging = True  # Activer le déplacement
                         # Mettre à jour immédiatement la valeur du FOV au clic
-                        relative_x = event.pos[0] - fov_bar_x
-                        fov_percentage = max(0.0, min(1.0, relative_x / fov_bar_width))
-                        slider_value = int(60 + (fov_percentage * 60))
-                        save_controls()
-                    elif fov_number_rect.collidepoint(event.pos):
-                        input_active = True
-                        input_text = ""
-                elif current_tab == "Audio":
+                        relative_x = event.pos[0] - fov_bar_x  # Calculer la position relative du curseur
+                        fov_percentage = max(0.0, min(1.0, relative_x / fov_bar_width))  # Calculer le pourcentage de progression
+                        slider_value = int(60 + (fov_percentage * 60))  # Mettre à jour la valeur du FOV
+                        save_controls()  # Sauvegarder les paramètres
+                    elif fov_number_rect.collidepoint(event.pos):  # Si le clic est sur le texte du FOV
+                        input_active = True  # Activer le texte
+                        input_text = ""  # Réinitialiser le texte
+                elif current_tab == "Audio":  # Si le tabulation est "Audio"
                     # Rectangle pour la détection du clic sur le texte du volume
                     volume_number_rect = pygame.Rect(
                         volume_slider_rect.right + 20, volume_slider_rect.y - 10, 60, 30
-                    )
-                    if volume_slider_rect.collidepoint(event.pos):
-                        is_dragging = True
-                        relative_x = event.pos[0] - volume_slider_rect.x
+                    )  # Rectangle pour la détection du clic sur le texte du volume
+                    if volume_slider_rect.collidepoint(event.pos):  # Si le clic est sur la barre de progression du volume  
+                        is_dragging = True  # Activer le déplacement
+                        relative_x = event.pos[0] - volume_slider_rect.x  # Calculer la position relative du curseur    
                         master_volume = int(
                             max(0.0, min(1.0, relative_x / volume_slider_rect.width))
                             * 100
-                        )
-                        walk_sound_effect.set_volume(master_volume / 100)
-                        save_controls()
-                    elif volume_number_rect.collidepoint(event.pos):
-                        input_active = True
-                        input_text = ""
-                elif current_tab == "Touches":
-                    if reset_button_rect.collidepoint(event.pos):
-                        controls = DEFAULT_CONTROLS.copy()
-                        save_controls()
-                    mouse_x, mouse_y = event.pos
-                    for i, (key, action) in enumerate(controls):
-                        control_frame_x = frame_x + 20
-                        control_frame_y = frame_y + 20 + i * spacing
-                        control_frame_width = frame_width - 40
-                        control_frame_height = 30
+                        )  # Mettre à jour le volume    
+                        walk_sound_effect.set_volume(master_volume / 100)  # Mettre à jour le volume
+                        save_controls()  # Sauvegarder les paramètres
+                    elif volume_number_rect.collidepoint(event.pos):  # Si le clic est sur le texte du volume
+                        input_active = True  # Activer le texte
+                        input_text = ""  # Réinitialiser le texte
+                elif current_tab == "Touches":  # Si le tabulation est "Touches"
+                    if reset_button_rect.collidepoint(event.pos):  # Si le clic est sur le bouton de réinitialisation
+                        controls = DEFAULT_CONTROLS.copy()  # Réinitialiser les contrôles
+                        save_controls()  # Sauvegarder les paramètres
+                    mouse_x, mouse_y = event.pos  # Récupérer la position de la souris
+                    for i, (key, action) in enumerate(controls):  # Pour chaque contrôle
+                        control_frame_x = frame_x + 20  # Position x du cadre de contrôle
+                        control_frame_y = frame_y + 20 + i * spacing  # Position y du cadre de contrôle
+                        control_frame_width = frame_width - 40  # Largeur du cadre de contrôle
+                        control_frame_height = 30  # Hauteur du cadre de contrôle
 
                         if (
                             control_frame_x + control_frame_width - 60
@@ -2347,81 +2369,78 @@ def start_game(screen, font, background_image, dimensions_possibles, current_sta
                             and control_frame_y
                             <= mouse_y
                             <= control_frame_y + control_frame_height
-                        ) and key != "ÉCHAP":
-                            waiting_for_key = i
-                            break
-            elif event.type == pygame.MOUSEBUTTONUP:
-                is_dragging = False
-            elif event.type == pygame.MOUSEMOTION and is_dragging:
-                if current_tab == "Vidéo":
-                    fov_bar_x = (display[0] - 300) // 2 + 150
-                    fov_bar_y = 240
-                    fov_bar_width = 150
-                    relative_x = event.pos[0] - fov_bar_x
-                    fov_percentage = max(0.0, min(1.0, relative_x / fov_bar_width))
-                    slider_value = int(60 + (fov_percentage * 60))
-                    save_controls()
-                elif current_tab == "Audio" and volume_slider_rect.collidepoint(
-                    event.pos
-                ):
-                    relative_x = event.pos[0] - volume_slider_rect.x
+                        ) and key != "ÉCHAP":  # Si le clic est sur le cadre de contrôle et que la touche n'est pas "ÉCHAP"
+                            waiting_for_key = i  # Mettre à jour la touche en cours de modification
+                            break  # Arrêter la boucle
+            elif event.type == pygame.MOUSEBUTTONUP:  # Si le clic est relâché
+                is_dragging = False  # Désactiver le déplacement
+            elif event.type == pygame.MOUSEMOTION and is_dragging:  # Si le mouvement de la souris est en cours et que le déplacement est actif
+                if current_tab == "Vidéo":  # Si le tabulation est "Vidéo"
+                    fov_bar_x = (display[0] - 300) // 2 + 150  # Position x de la barre de progression du FOV
+                    fov_bar_y = 240  # Position y de la barre de progression du FOV
+                    fov_bar_width = 150  # Largeur de la barre de progression du FOV
+                    relative_x = event.pos[0] - fov_bar_x  # Calculer la position relative du curseur
+                    fov_percentage = max(0.0, min(1.0, relative_x / fov_bar_width))  # Calculer le pourcentage de progression
+                    slider_value = int(60 + (fov_percentage * 60))  # Mettre à jour la valeur du FOV
+                    save_controls()  # Sauvegarder les paramètres
+                elif current_tab == "Audio" and volume_slider_rect.collidepoint(event.pos):  # Si le clic est sur la barre de progression du volume
+                    relative_x = event.pos[0] - volume_slider_rect.x  # Calculer la position relative du curseur
                     master_volume = int(
                         max(0.0, min(1.0, relative_x / volume_slider_rect.width)) * 100
-                    )
-                    walk_sound_effect.set_volume(master_volume / 100)
-                    save_controls()
-            elif event.type == pygame.KEYDOWN:
-                if input_active:
-                    if event.key == pygame.K_RETURN:
+                    )  # Mettre à jour le volume
+                    walk_sound_effect.set_volume(master_volume / 100)  # Mettre à jour le volume
+                    save_controls()  # Sauvegarder les paramètres
+            elif event.type == pygame.KEYDOWN:  # Si une touche est enfoncée
+                if input_active:  # Si le texte est actif
+                    if event.key == pygame.K_RETURN:  # Si la touche est "Entrée"
                         try:
-                            new_value = int(input_text)
-                            if current_tab == "Vidéo":
-                                if new_value > 120:
-                                    new_value = 120
-                                elif new_value < 60:
-                                    new_value = 60
-                                slider_value = new_value
-                            elif current_tab == "Audio":
-                                if new_value > 100:
-                                    new_value = 100
-                                elif new_value < 0:
-                                    new_value = 0
-                                master_volume = new_value
-                                walk_sound_effect.set_volume(master_volume / 100)
-                            save_controls()
-                        except ValueError:
-                            pass
-                        input_active = False
-                    elif event.key == pygame.K_BACKSPACE:
-                        input_text = input_text[:-1]
-                    elif event.unicode.isdigit() and len(input_text) < 3:
-                        input_text += event.unicode
+                            new_value = int(input_text)  # Convertir le texte en valeur
+                            if current_tab == "Vidéo":  # Si le tabulation est "Vidéo"
+                                if new_value > 120:  # Si la valeur est supérieure à 120
+                                    new_value = 120  # Mettre à jour la valeur
+                                elif new_value < 60:  # Si la valeur est inférieure à 60
+                                    new_value = 60  # Mettre à jour la valeur
+                                slider_value = new_value  # Mettre à jour la valeur du FOV
+                            elif current_tab == "Audio":  # Si le tabulation est "Audio"
+                                if new_value > 100:  # Si la valeur est supérieure à 100
+                                    new_value = 100  # Mettre à jour la valeur
+                                elif new_value < 0:  # Si la valeur est inférieure à 0
+                                    new_value = 0  # Mettre à jour la valeur
+                                master_volume = new_value  # Mettre à jour le volume
+                                walk_sound_effect.set_volume(master_volume / 100)  # Mettre à jour le volume
+                            save_controls()  # Sauvegarder les paramètres
+                        except ValueError:  # Si la valeur n'est pas un nombre
+                            pass  # Ne rien faire
+                        input_active = False  # Désactiver le texte
+                    elif event.key == pygame.K_BACKSPACE:  # Si la touche est "Retour arrière"
+                        input_text = input_text[:-1]  # Supprimer le dernier caractère
+                    elif event.unicode.isdigit() and len(input_text) < 3:  # Si le caractère est un chiffre et que le texte est inférieur à 3 caractères
+                        input_text += event.unicode  # Ajouter le caractère au texte
 
-        pygame.display.flip()
+        pygame.display.flip()  # Mettre à jour l'affichage
 
 
-# Modified afficher_parametres function to work with a surface paramete
 # Fonction principale du menu
 def main_menu():
-    global controls, waiting_for_key, frame_x, frame_y, frame_width, frame_height, spacing
-    pygame.init()
+    global controls, waiting_for_key, frame_x, frame_y, frame_width, frame_height, spacing  # Variables globales
+    pygame.init()  # Initialiser Pygame
 
     # Charger les contrôles sauvegardés
     load_controls()
 
     # Paramètres d'écran - ajout du flag NOFRAME pour borderless
-    screen_width, screen_height = 768, 768
+    screen_width, screen_height = 768, 768  # Largeur et hauteur de l'écran
     screen = pygame.display.set_mode(
         (screen_width, screen_height), pygame.RESIZABLE | pygame.NOFRAME
-    )
-    pygame.display.set_caption("Menu principal")
+    )  # Créer la fenêtre   
+    pygame.display.set_caption("Menu principal")  # Définir le titre de la fenêtre
 
     # Variables pour le déplacement de la fenêtre
-    dragging = False
-    drag_offset_x = 0
-    drag_offset_y = 0
-    window_x = 0
-    window_y = 0
+    dragging = False  # Variable pour suivre si la fenêtre est en train de être déplacée
+    drag_offset_x = 0  # Variable pour suivre la position relative du déplacement
+    drag_offset_y = 0  # Variable pour suivre la position relative du déplacement
+    window_x = 0  # Variable pour suivre la position de la fenêtre
+    window_y = 0  # Variable pour suivre la position de la fenêtre
 
     # Variable pour suivre la touche en cours de modification
     waiting_for_key = None
@@ -2434,32 +2453,32 @@ def main_menu():
     game_background.fill((20, 20, 20))  # Presque noir
 
     # Charger la vidéo de fond pour le menu principal
-    local_video_path = "src/media/bg.mp4"
-    video_capture = load_local_video(local_video_path)
+    local_video_path = os.sep.join(["src", "media", "bg.mp4"])  # Chemin de la vidéo de fond
+    video_capture = load_local_video(local_video_path)  # Charger la vidéo de fond
 
     # Variables pour le contrôle de la vidéo
 
     frame_delay = 1.0 / 35  # Temps entre chaque frame en secondes
-    last_frame_time = time.time()
+    last_frame_time = time.time()  # Temps de la dernière frame
 
     # Charger l'image de la flèche pour le retour
-    back_button_image = pygame.image.load(
-        "src/icons/back_arrow.png"
+    back_button_image = pygame.image.load(  
+        os.sep.join(["src", "icons", "back_arrow.png"])
     ).convert_alpha()  # Assurez-vous d'avoir cette image
     back_button_image = pygame.transform.scale(
         back_button_image, (50, 50)
     )  # Ajustez la taille selon votre besoin
 
     # Couleurs et police
-    blue = (100, 200, 255)
-    hover_blue = (50, 150, 255)
+    blue = (100, 200, 255)  # Couleur bleue
+    hover_blue = (50, 150, 255)  # Couleur bleue au survol
     font = pygame.font.Font(None, 24)  # Réduit de 36 à 24
 
     # Calculer la taille des boutons en fonction de la taille de la fenêtre
     button_width = int(screen_width * 0.3)  # 30% de la largeur de la fenêtre
     button_height = int(screen_height * 0.08)  # 8% de la hauteur de la fenêtre
     button_spacing = int(screen_height * 0.02)  # 2% de la hauteur de la fenêtre
-    total_height = 4 * button_height + 3 * button_spacing
+    total_height = 4 * button_height + 3 * button_spacing  # Calculer la hauteur totale des boutons
 
     start_y = (screen_height - total_height) // 2  # Centre verticalement
 
@@ -2510,21 +2529,21 @@ def main_menu():
         ),
     ]
 
-    clock = pygame.time.Clock()
-    running = True
-    current_state = "parametres"
-    current_tab = "Vidéo"
-    slider_value = 110
-    is_dragging = False
+    clock = pygame.time.Clock()  # Créer un horloge
+    running = True  # Variable pour suivre si le jeu est en cours
+    current_state = "parametres"  # État actuel du menu
+    current_tab = "Vidéo"  # Tabulation actuelle
+    slider_value = 110  # Valeur du FOV
+    is_dragging = False  # Variable pour suivre si la fenêtre est en train de être déplacée
 
     while running:
-        current_time = time.time()
+        current_time = time.time()  # Temps actuel
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT:  # Si l'événement est la fermeture de la fenêtre
                 # Sauvegarder les contrôles avant de quitter
-                save_controls()
-                running = False
+                save_controls()  # Sauvegarder les contrôles
+                running = False  # Arrêter la boucle
 
             # Gestion du déplacement de la fenêtre
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -2532,85 +2551,87 @@ def main_menu():
                     mouse_x, mouse_y = event.pos
                     # Vérifier si le clic est dans la zone de titre (haut de la fenêtre)
                     if mouse_y < 30:  # Zone de titre de 30 pixels de haut
-                        dragging = True
-                        drag_offset_x = mouse_x
-                        drag_offset_y = mouse_y
+                        dragging = True  # Activer le déplacement
+                        drag_offset_x = mouse_x  # Position relative du déplacement
+                        drag_offset_y = mouse_y  # Position relative du déplacement
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:  # Clic gauche
-                    dragging = False
+                    dragging = False  # Désactiver le déplacement
 
             elif event.type == pygame.MOUSEMOTION:
                 if dragging:
                     # Calculer le déplacement
-                    dx = event.pos[0] - drag_offset_x
-                    dy = event.pos[1] - drag_offset_y
+                    dx = event.pos[0] - drag_offset_x  # Calculer le déplacement
+                    dy = event.pos[1] - drag_offset_y  # Calculer le déplacement
                     # Mettre à jour la position de la fenêtre
-                    window_x += dx
-                    window_y += dy
-                    # Déplacer la fenêtre
+                    window_x += dx  # Mettre à jour la position de la fenêtre
+                    window_y += dy  # Mettre à jour la position de la fenêtre
+                    # Déplacer la fenêtre 
                     if os.name == "nt":  # Windows
                         from ctypes import windll
 
-                        hwnd = pygame.display.get_wm_info()["window"]
+                        hwnd = pygame.display.get_wm_info()["window"]  # Récupérer la fenêtre
                         windll.user32.SetWindowPos(
                             hwnd, 0, window_x, window_y, 0, 0, 0x0001
                         )
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_F11:  # Si la touche est F11
-                    toggle_fullscreen()
+                    toggle_fullscreen()  # Activer le plein écran
 
             elif event.type == pygame.VIDEORESIZE:  # Détecte le redimensionnement
-                screen_width, screen_height = event.w, event.h
+                screen_width, screen_height = event.w, event.h  # Redimensionner la fenêtre 
                 screen = pygame.display.set_mode(
                     (screen_width, screen_height), pygame.RESIZABLE | pygame.NOFRAME
-                )
+                )  # Redimensionner la fenêtre
                 # Redimensionner les arrière-plans
                 credits_background = pygame.transform.scale(
                     credits_background, (screen_width, screen_height)
-                )
+                )  # Redimensionner les arrière-plans       
                 game_background = pygame.transform.scale(
                     game_background, (screen_width, screen_height)
-                )
+                )  # Redimensionner les arrière-plans
                 # Mettre à jour la position des boutons
-                start_y = (screen_height - total_height) // 2
+                start_y = (screen_height - total_height) // 2  # Centre verticalement
                 buttons[0].rect.topleft = (
                     screen_width // 2 - button_width // 2,
                     start_y,
-                )
+                )  # Mettre à jour la position du bouton    
                 buttons[1].rect.topleft = (
                     screen_width // 2 - button_width // 2,
                     start_y + button_height + button_spacing,
-                )
+                )  # Mettre à jour la position du bouton
                 buttons[2].rect.topleft = (
                     screen_width // 2 - button_width // 2,
                     start_y + 2 * (button_height + button_spacing),
-                )
+                )  # Mettre à jour la position du bouton
                 buttons[3].rect.topleft = (
                     screen_width // 2 - button_width // 2,
                     start_y + 3 * (button_height + button_spacing),
-                )
+                )  # Mettre à jour la position du bouton
 
+            # Gestion des événements du bouton
             if current_state == "parametres":
                 for button in buttons:
                     if button.is_clicked(event):
                         if button.text == "Visiter le site":
-                            current_state = "game"
+                            current_state = "game"  # Passer à l'état de jeu
                         elif button.text == "Paramètres":
-                            current_state = "settings"
+                            current_state = "settings"  # Passer à l'état de paramètres
                         elif button.text == "Crédits":
-                            current_state = "credits"
+                            current_state = "credits"  # Passer à l'état de crédits 
                         elif button.text == "Quitter":
-                            pygame.quit()
-                            sys.exit()
+                            pygame.quit()  # Quitter le jeu
+                            sys.exit()  # Quitter le programme
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_BACKSPACE:
-                    current_state = "parametres"
+                    current_state = "parametres"  # Passer à l'état de paramètres
                 elif event.key == pygame.K_LEFT:
-                    current_state = "parametres"
+                    current_state = "parametres"  # Passer à l'état de paramètres
 
+            # Gestion des événements du menu paramètres
             if current_state == "settings":
                 (
                     back_rect,
@@ -2624,19 +2645,19 @@ def main_menu():
                 )
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if back_rect.collidepoint(event.pos):
-                        current_state = "parametres"
+                        current_state = "parametres"  # Passer à l'état de paramètres
                     for tab_button in tab_buttons:
                         if tab_button.is_clicked(event):
-                            current_tab = tab_button.text
+                            current_tab = tab_button.text  # Mettre à jour la tabulation    
                     if current_tab == "Vidéo":
                         if left_rect.collidepoint(event.pos):
                             change_resolution(
                                 (current_resolution_index - 1) % len(resolutions)
-                            )
+                            )  # Changer la résolution
                         elif right_rect.collidepoint(event.pos):
                             change_resolution(
                                 (current_resolution_index + 1) % len(resolutions)
-                            )
+                            )  # Changer la résolution
                     elif current_tab == "Audio":
                         if volume_slider_rect.collidepoint(event.pos):
                             # Calculer le volume en fonction de la position du clic
@@ -2644,21 +2665,21 @@ def main_menu():
                             relative_x = event.pos[0] - volume_slider_rect.x
                             master_volume = max(
                                 0.0, min(1.0, relative_x / volume_slider_rect.width)
-                            )
+                            )  # Mettre à jour le volume
                             # Mettre à jour le volume de tous les sons
                             walk_sound_effect.set_volume(master_volume)
-                            save_controls()
+                            save_controls()  # Sauvegarder les paramètres
                     elif current_tab == "Touches":
                         if reset_button_rect.collidepoint(event.pos):
-                            controls = DEFAULT_CONTROLS.copy()
-                            save_controls()
+                            controls = DEFAULT_CONTROLS.copy()  # Réinitialiser les contrôles
+                            save_controls()  # Sauvegarder les paramètres
                         # Vérifier si un clic a été fait sur une touche
                         mouse_x, mouse_y = event.pos
                         for i, (key, action) in enumerate(controls):
-                            control_frame_x = frame_x + 20
-                            control_frame_y = frame_y + 20 + i * spacing
-                            control_frame_width = frame_width - 40
-                            control_frame_height = 30
+                            control_frame_x = frame_x + 20  # Position x du cadre de contrôle
+                            control_frame_y = frame_y + 20 + i * spacing  # Position y du cadre de contrôle
+                            control_frame_width = frame_width - 40  # Largeur du cadre de contrôle
+                            control_frame_height = 30  # Hauteur du cadre de contrôle
 
                             if (
                                 control_frame_x + control_frame_width - 60
@@ -2668,23 +2689,23 @@ def main_menu():
                                 <= mouse_y
                                 <= control_frame_y + control_frame_height
                             ) and key != "ÉCHAP":
-                                waiting_for_key = i
+                                waiting_for_key = i  # Mettre à jour la touche en cours de modification
                                 break
                 elif event.type == pygame.KEYDOWN and waiting_for_key is not None:
                     # Si la touche est ÉCHAP, supprimer la touche assignée
                     if event.key == pygame.K_ESCAPE:
                         controls[waiting_for_key] = ("-", controls[waiting_for_key][1])
-                        waiting_for_key = None
-                        save_controls()
+                        waiting_for_key = None  # Réinitialiser la touche en cours de modification
+                        save_controls()  # Sauvegarder les paramètres
                     else:
                         # Convertir la touche en texte
                         key_name = pygame.key.name(event.key).upper()
-                        if key_name == "ESCAPE":
-                            key_name = "ÉCHAP"
-                        elif key_name == "SPACE":
-                            key_name = "ESPACE"
-                        elif key_name == "LEFT SHIFT":
-                            key_name = "SHIFT"
+                        if key_name == "ESCAPE":  # Si la touche est ESCAPE
+                            key_name = "ÉCHAP"  # Mettre à jour la touche
+                        elif key_name == "SPACE":  # Si la touche est ESPACE
+                            key_name = "ESPACE"  # Mettre à jour la touche
+                        elif key_name == "LEFT SHIFT":  # Si la touche est LEFT SHIFT
+                            key_name = "SHIFT"  # Mettre à jour la touche
 
                         # Mettre à jour la touche
                         controls[waiting_for_key] = (
@@ -2734,34 +2755,37 @@ def main_menu():
             version_surface = version_font.render(version_text, True, (255, 255, 255))
             version_rect = version_surface.get_rect(
                 bottomright=(screen_width - 10, screen_height - 10)
-            )
-            screen.blit(version_surface, version_rect)
+            ) # Afficher la version en bas à droite
+            screen.blit(version_surface, version_rect) 
 
+        # Afficher le menu crédits
         elif current_state == "credits":
-            back_rect = display_credits(screen, font, back_button_image)
+            back_rect = display_credits(screen, font, back_button_image) # Afficher le menu crédits
             if event.type == pygame.MOUSEBUTTONDOWN and back_rect.collidepoint(
                 event.pos
             ):
                 current_state = "parametres"
         elif current_state == "settings":
-            display_settings(screen, font, back_button_image, current_tab)
+            display_settings(screen, font, back_button_image, current_tab) # Afficher le menu paramètres
         elif current_state == "game":
             start_game(
                 screen, font, game_background, dimensions_possibles, current_state
-            )
+            ) # Démarrer le jeu
             pygame.display.flip()
-        elif current_state == "quitter":
-            quit_game()
+        elif current_state == "quitter": 
+            quit_game() # Quitter le jeu
 
-        pygame.display.flip()  # Limiter le framerate global à 60 FPS
+        
+        pygame.display.flip(60)  # Limiter le framerate global à 60 FPS
 
-    if video_capture:
-        video_capture.release()
-    # Sauvegarder les contrôles avant de quitter
-    save_controls()
-    pygame.quit()
+        # Sauvegarder les contrôles avant de quitter
+        if video_capture:
+            video_capture.release()
+        # Sauvegarder les contrôles avant de quitter
+    save_controls() # Sauvegarder les contrôles
+    pygame.quit() # Quitter le jeu
 
-
+# Sauvegarder les contrôles dans le fichier de configuration
 def save_controls():
     """Sauvegarde les contrôles dans le fichier de configuration."""
     config_dir = "config"
@@ -2778,36 +2802,35 @@ def save_controls():
     with open(config_file, "w") as f:
         json.dump(config_data, f, indent=4)
 
-
+# Charger les contrôles depuis le fichier de configuration
 def load_controls():
-    """Charge les contrôles depuis le fichier de configuration."""
-    global controls, master_volume, slider_value
+    global controls, master_volume, slider_value # Variables globales
 
     # S'assurer que controls a une valeur par défaut
     if controls is None:
-        controls = DEFAULT_CONTROLS.copy()
+        controls = DEFAULT_CONTROLS.copy() # Réinitialiser les contrôles
 
-    config_file = os.path.join("config", "settings.json")
-    if os.path.exists(config_file):
+    config_file = os.path.join("config", "settings.json") # Chemin du fichier de configuration
+    if os.path.exists(config_file): # Vérifier si le fichier de configuration existe
         try:
-            with open(config_file, "r") as f:
-                config_data = json.load(f)
-                if "controls" in config_data:
-                    controls = config_data["controls"]
-                if "master_volume" in config_data:
-                    master_volume = config_data["master_volume"]
+            with open(config_file, "r") as f: # Ouvrir le fichier de configuration
+                config_data = json.load(f) # Charger les données du fichier de configuration
+                if "controls" in config_data: # Vérifier si les contrôles existent dans le fichier de configuration
+                    controls = config_data["controls"] # Charger les contrôles
+                if "master_volume" in config_data: # Vérifier si le volume existe dans le fichier de configuration
+                    master_volume = config_data["master_volume"] # Charger le volume
                     # Appliquer le volume aux effets sonores
                     if "walk_sound_effect" in globals():
-                        walk_sound_effect.set_volume(master_volume)
-                if "slider_value" in config_data:
-                    slider_value = config_data["slider_value"]
+                        walk_sound_effect.set_volume(master_volume) # Appliquer le volume aux effets sonores
+                if "slider_value" in config_data: # Vérifier si la valeur du slider existe dans le fichier de configuration
+                    slider_value = config_data["slider_value"] # Charger la valeur du slider
         except Exception as e:
-            print(f"Erreur lors du chargement des contrôles: {e}")
+            print(f"Erreur lors du chargement des contrôles: {e}") # Afficher une erreur si le chargement des contrôles échoue
             # En cas d'erreur, utiliser les contrôles par défaut
-            controls = DEFAULT_CONTROLS.copy()
+            controls = DEFAULT_CONTROLS.copy() # Réinitialiser les contrôles
 
     return controls  # Retourner les contrôles chargés ou par défaut
 
-
+# Démarrer le menu principal
 if __name__ == "__main__":
-    main_menu()
+    main_menu() # Démarrer le menu principal
