@@ -69,7 +69,7 @@ class App:
         self.mission_index = 0
         self.carte_choix = self.prochaine_mission()
         self.state = "menu"
-        self.tab = "Vidéo"
+        self.tab, self.confirmer_reset = "Vidéo", False
         self.settings_back = "menu"
         self.waiting_key = None
         self.skip_motion = False
@@ -265,7 +265,7 @@ class App:
 
     def open_settings(self, retour):
         self.settings_back = retour
-        self.waiting_key = None
+        self.waiting_key, self.confirmer_reset = None, False
         self.set_state("settings")
 
     def close_settings(self):
@@ -734,9 +734,9 @@ class App:
             self.close_settings()
             return
         ui.text("Paramètres", 52, (ui.W / 2, 64), GOLD, serif=True)
-        for k, onglet in enumerate(("Vidéo", "Audio", "Touches")):
-            if ui.button(onglet, (ui.W / 2 + (k - 1) * 160, 124), 28, couleur=GOLD if onglet == self.tab else DIM):
-                self.tab, self.waiting_key = onglet, None
+        for k, onglet in enumerate(("Vidéo", "Audio", "Touches", "Partie")):
+            if ui.button(onglet, (ui.W / 2 + (k - 1.5) * 160, 124), 28, couleur=GOLD if onglet == self.tab else DIM):
+                self.tab, self.waiting_key, self.confirmer_reset = onglet, None, False
         ui.line(GOLD, (ui.W / 2 - 330, 150), (ui.W / 2 + 330, 150))
         if self.tab == "Vidéo":
             xd = self.row("Résolution", 200)
@@ -768,6 +768,21 @@ class App:
                 ui.text(f"{round(valeur * 100)} %", 24, (xd, y), IVORY, "midright")
             if ui.button("Tester le son", (ui.W / 2, 324), 24, couleur=BLUE):
                 self.audio.play("joyau")
+        elif self.tab == "Partie":
+            nuits = sum(bool(self.progres(k)) for k in range(len(CAMPAGNE)))
+            ui.text(f"Progression : {nuits} nuit{'s' if nuits > 1 else ''} sur {len(CAMPAGNE)}  ·  "
+                    f"{self.total_etoiles()} / {3 * len(CAMPAGNE)} étoiles", 24, (ui.W / 2, 210), IVORY)
+            if self.confirmer_reset:  # deux clics : on n'efface pas tout par erreur
+                ui.text("Effacer toutes les nuits, étoiles et records ?", 22, (ui.W / 2, 280), RED)
+                if ui.button("Oui, tout effacer", (ui.W / 2 - 20, 330), 24, "midright", RED):
+                    s["progress"] = {}
+                    save_settings(s)
+                    self.carte_choix, self.confirmer_reset = 0, False
+                    self.toast = ("Progression réinitialisée", self.t)
+                if ui.button("Annuler", (ui.W / 2 + 20, 330), 24, "midleft", BLUE):
+                    self.confirmer_reset = False
+            elif ui.button("Réinitialiser la progression", (ui.W / 2, 290), 24, couleur=BLUE):
+                self.confirmer_reset = True
         else:
             y = 184
             for action, libelle, _ in ACTIONS:

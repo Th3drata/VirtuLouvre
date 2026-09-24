@@ -73,7 +73,7 @@ python3 -m venv .venv                                 # Windows : py -m venv .ve
 | F11 ou Alt+Entrée | Plein écran (sur Mac, F11 règle le volume : utilise Option+Entrée) |
 | F12 | Capture d'écran (dossier `captures/`) |
 
-Toutes les touches (sauf Échap, F11, F12 et les flèches) se changent dans **Paramètres > Touches**. Les réglages et la progression sont enregistrés dans `config/settings.json`.
+Toutes les touches (sauf Échap, F11, F12 et les flèches) se changent dans **Paramètres > Touches**. Les réglages et la progression sont enregistrés dans `config/settings.json`. Pour recommencer la campagne depuis le début : **Paramètres > Partie > Réinitialiser la progression**.
 
 ## Structure du projet
 
