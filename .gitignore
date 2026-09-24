@@ -1,0 +1,17 @@
+# Environnements Python (.venv créé par les lanceurs, ou venv créé directement à la racine)
+.venv/
+venv/
+/bin/
+/lib/
+/include/
+/pyvenv.cfg
+__pycache__/
+*.pyc
+
+# Captures d'écran du jeu (F12)
+captures/
+
+# Fichiers système / éditeur
+.DS_Store
+Thumbs.db
+.claude/settings.local.json

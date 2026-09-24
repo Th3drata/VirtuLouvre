@@ -1,46 +1,36 @@
 {
-    "controls": [
-        [
-            "Z",
-            "Avancer"
+    "volume": 0.8,
+    "fov": 75,
+    "sensitivity": 0.12,
+    "resolution": null,
+    "fullscreen": false,
+    "best_time": null,
+    "controls": {
+        "forward": [
+            "z",
+            "w"
         ],
-        [
-            "S",
-            "Reculer"
+        "back": [
+            "s"
         ],
-        [
-            "Q",
-            "Gauche"
+        "left": [
+            "q",
+            "a"
         ],
-        [
-            "D",
-            "Droite"
+        "right": [
+            "d"
         ],
-        [
-            "V",
-            "Sprint"
+        "sprint": [
+            "left shift"
         ],
-        [
-            "ESPACE",
-            "Voler"
+        "jump": [
+            "space"
         ],
-        [
-            "SHIFT",
-            "Descendre"
+        "down": [
+            "c"
         ],
-        [
-            "G",
-            "Atterrir"
-        ],
-        [
-            "\u00c9CHAP",
-            "Menu"
-        ],
-        [
-            "F11",
-            "Plein \u00e9cran"
+        "fly": [
+            "g"
         ]
-    ],
-    "master_volume": 1.0,
-    "slider_value": 110
+    }
 }

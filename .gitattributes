@@ -1,0 +1,5 @@
+# Fins de ligne adaptées à chaque système, quel que soit celui qui clone le dépôt
+*.bat text eol=crlf
+*.command text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
