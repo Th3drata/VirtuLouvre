@@ -1,12 +1,13 @@
-"""Le joueur et les autres personnages (gardiens, voleurs, guetteurs, chef du Cercle)."""
+"""Le joueur et les autres personnages (gardiens, voleurs, guetteurs, chef du Cercle, visiteurs)."""
 
 import math
+import random
 
 import numpy as np
 from OpenGL.GL import *
 
 from .base import BODY, CROUCH_BODY, CROUCH_EYE, EYE, angle_vers, clamp, ecart_angle
-from .modeles import EPAULE, HANCHE, LAMPE, modele
+from .modeles import modele
 
 
 class Player:
@@ -102,38 +103,145 @@ class Player:
             self.bob += dt * vitesse * 3.2
 
 
-class PNJ:
-    """Personnage non joueur : se déplace, patrouille, regarde autour de lui, tient parfois une lampe."""
+def _t(v):
+    m = np.identity(4)
+    m[:3, 3] = v
+    return m
 
-    def __init__(self, tenue, x, z, yaw=0.0, salle=None, vitesse=1.3):
-        self.modele = modele("humain:" + tenue)
+
+def _r(axe, degres):
+    """Rotation 4 × 4 comme glRotatef(degres, *axe) pour un axe x, y ou z."""
+    c, s = math.cos(math.radians(degres)), math.sin(math.radians(degres))
+    i, j = {"x": (1, 2), "y": (2, 0), "z": (0, 1)}[axe]
+    m = np.identity(4)
+    m[i, i] = m[j, j] = c
+    m[i, j], m[j, i] = -s, s
+    return m
+
+
+POSES_BRAS = {  # pose : (épaule : balancé avant/arrière, écart ; coude : pliure, torsion) pour le bras gauche
+    "mains_en_l_air": ((-165, 20), (-20, 0)),
+    "bras_croises": ((-14, 8), (-100, -78)),
+    "mains_dos": ((32, 10), (-80, -88)),
+    "photo": ((-72, 6), (-68, -32)),
+    "assis": ((-28, 6), (-48, 0)),
+    "porte": ((-30, 16), (-62, 0)),  # il porte un tableau contre lui
+}
+
+
+class PNJ:
+    """Personnage non joueur : se déplace, patrouille, regarde autour de lui, tient parfois une lampe.
+    Il est articulé (cuisses, genoux, bras, coudes, tête) et prend des poses : "normal", "course",
+    "mains_en_l_air", "bras_croises", "mains_dos", "photo", "telephone", "pointe", "assis"."""
+
+    def __init__(self, tenue, x, z, yaw=0.0, salle=None, vitesse=1.3, nom_modele=None):
+        self.modele = modele(nom_modele or "humain:" + tenue)
+        self.os = self.modele.infos["articulations"]
         self.pos = np.array((x, salle.sol_sous(x, z) if salle else 0.0, z), float)
         self.yaw, self.vitesse = yaw, vitesse
         self.phase = self.ampleur = 0.0
-        self.pose = "normal"  # "normal", "course" ou "mains_en_l_air"
+        self.pose = "normal"
         self.route, self.index, self.attente, self.regard = [], 0, 0.0, yaw
-        self.t = 0.0
+        self.t = random.uniform(0, 100)
+        self.tete = [0.0, 0.0]  # lacet et tangage de la tête par rapport au corps
+        self.porte = None  # dessine ce qu'il tient contre lui (dans le repère du buste)
         self.lampe_allumee = self.modele.infos.get("lampe", False)
         self.alerte = 0.0  # 0 : ne voit rien ; 1 : a repéré le joueur
         self.distrait = 0.0  # temps restant à regarder vers un bruit
 
     def oeil(self):
-        return self.pos + (0.0, 1.55, 0.0)
+        return self.pos + (0.0, 1.55 * self.modele.infos["taille"], 0.0)
 
     def devant(self):
         a = math.radians(self.yaw)
         return np.array((math.cos(a), 0.0, math.sin(a)))
 
-    def _vers_monde(self, local):
-        """Point du repère du personnage (qui regarde vers +z) -> monde."""
-        t = math.radians(90 - self.yaw)
-        x, y, z = local
-        return self.pos + np.array((x * math.cos(t) + z * math.sin(t), y, -x * math.sin(t) + z * math.cos(t)))
+    # --- Squelette ---
+
+    def angles(self):
+        """Angles des articulations pour l'image en cours (marche, course, poses, respiration)."""
+        a, s, t = min(self.ampleur, 1.4), math.sin(self.phase), self.t
+        cuisse, genou = 30 * a * s, 5 + 60 * a * max(0.0, math.cos(self.phase)) ** 1.5
+        cuisse2, genou2 = -cuisse, 5 + 60 * a * max(0.0, -math.cos(self.phase)) ** 1.5
+        course = max(0.0, min(1.0, (a - 0.6) / 0.6))
+        balance = 24 * a * s
+        repos = 2.5 * math.sin(t * 1.6) * (1 - min(1.0, a * 2))  # respiration, à l'arrêt
+        coude = -10 - 70 * course + repos
+        A = {"penche": 9 * course, "y": -self.os["bassin"][1] * (1 - math.cos(math.radians(cuisse))),
+             "cuisse_g": -cuisse, "genou_g": genou, "cuisse_d": -cuisse2, "genou_d": genou2,
+             "epaule_g": (balance * 1.3 + repos, 6), "coude_g": (coude, 0), "epaule_d": (-balance * 1.3 - repos, 6),
+             "coude_d": (coude, 0), "tete": (self.tete[0] + 6 * math.sin(t * 0.37), self.tete[1] + 2 * math.sin(t * 0.23))}
+        pose = self.pose
+        if pose == "assis":
+            A.update(y=0.49 - self.os["bassin"][1], cuisse_g=-88, genou_g=86, cuisse_d=-84, genou_d=90, penche=-4)
+        if pose in POSES_BRAS:
+            (e, ecart), (pli, torsion) = POSES_BRAS[pose]
+            A["epaule_g"], A["coude_g"] = (e + repos, ecart), (pli, torsion)
+            A["epaule_d"], A["coude_d"] = (e - repos, ecart), (pli, torsion)
+        elif pose == "telephone":
+            A["epaule_d"], A["coude_d"], A["tete"] = (-22, 6), (-82, -20), (self.tete[0] * 0.3, 24)
+        elif pose == "pointe":
+            A["epaule_d"], A["coude_d"] = (-128 + 4 * math.sin(t * 2), 14), (-8, 0)
+        if self.modele.infos.get("lampe") and pose != "mains_en_l_air":
+            A["epaule_d"], A["coude_d"] = (-40 + balance * 0.12, 4), (-38, 0)  # la lampe éclaire devant lui
+        if pose == "photo":
+            A["tete"] = (0.0, -6.0)
+        return A
+
+    def _chaine(self, A, partie):
+        """Transformations (comme les appels OpenGL) qui placent une partie du corps."""
+        o = self.os
+        base = [("t", self.pos), ("r", "y", 90 - self.yaw), ("t", (0.0, A["y"], 0.0))]
+        buste = base + [("p", o["bassin"], [("x", A["penche"])])]
+        cote = partie[-1]
+        signe = 1 if cote == "g" else -1
+        if partie.startswith(("cuisse", "jambe")):
+            chaine = base + [("p", o["hanche_" + cote], [("x", A["cuisse_" + cote])])]
+            return chaine + [("p", o["genou_" + cote], [("x", A["genou_" + cote])])] if partie.startswith("jambe") else chaine
+        if partie.startswith(("bras", "avantbras")):
+            (e, ecart), (pli, torsion) = A["epaule_" + cote], A["coude_" + cote]
+            chaine = buste + [("p", o["epaule_" + cote], [("z", signe * ecart), ("x", e)])]
+            if partie.startswith("avantbras"):
+                chaine += [("p", o["coude_" + cote], [("y", signe * torsion), ("x", pli)])]
+            return chaine
+        if partie == "tete":
+            return buste + [("p", o["cou"], [("y", A["tete"][0]), ("x", A["tete"][1])])]
+        return buste
+
+    @staticmethod
+    def _gl(chaine):
+        for op in chaine:
+            if op[0] == "t":
+                glTranslatef(*op[1])
+            elif op[0] == "r":
+                glRotatef(op[2], *{"x": (1, 0, 0), "y": (0, 1, 0), "z": (0, 0, 1)}[op[1]])
+            else:
+                glTranslatef(*op[1])
+                for axe, degres in op[2]:
+                    glRotatef(degres, *{"x": (1, 0, 0), "y": (0, 1, 0), "z": (0, 0, 1)}[axe])
+                glTranslatef(*-np.asarray(op[1]))
+
+    @staticmethod
+    def _matrice(chaine):
+        m = np.identity(4)
+        for op in chaine:
+            if op[0] == "t":
+                m = m @ _t(op[1])
+            elif op[0] == "r":
+                m = m @ _r(op[1], op[2])
+            else:
+                m = m @ _t(op[1])
+                for axe, degres in op[2]:
+                    m = m @ _r(axe, degres)
+                m = m @ _t(-np.asarray(op[1]))
+        return m
 
     def lampe(self):
-        """(position, direction) de la lampe torche, légèrement pointée vers le sol."""
-        a, p = math.radians(self.yaw), math.radians(-12)
-        return self._vers_monde(LAMPE), np.array((math.cos(a) * math.cos(p), math.sin(p), math.sin(a) * math.cos(p)))
+        """(position, direction) de la lampe torche, qui suit l'avant-bras droit."""
+        m = self._matrice(self._chaine(self.angles(), "avantbras_d"))
+        return (m @ (*self.modele.infos["bout_lampe"], 1.0))[:3], m[:3, :3] @ (0.0, -1.0, 0.0)
+
+    # --- Déplacements ---
 
     def tourner_vers(self, lacet, dt, vitesse=200.0):
         ecart = ecart_angle(self.yaw, lacet)
@@ -142,10 +250,11 @@ class PNJ:
     def avancer_vers(self, x, z, dt, salle, vitesse=None):
         """Marche vers (x, z) ; renvoie True une fois arrivé."""
         vitesse = self.vitesse if vitesse is None else vitesse
+        self.t += dt
         dx, dz = x - self.pos[0], z - self.pos[2]
         d = math.hypot(dx, dz)
         if d < 0.05:
-            self.ampleur = max(0.0, self.ampleur - dt * 4)
+            self.ralentir(dt)
             return True
         self.tourner_vers(angle_vers(dx, dz), dt, 260)
         pas = min(d, vitesse * dt)
@@ -153,9 +262,13 @@ class PNJ:
         self.pos[2] += dz / d * pas
         if salle:
             self.pos[1] += (salle.sol_sous(self.pos[0], self.pos[2]) - self.pos[1]) * min(1.0, dt * 12)
-        self.ampleur += (min(1.3, vitesse / 2.6) - self.ampleur) * min(1.0, dt * 6)
-        self.phase += dt * vitesse * 3.3
+        self.ampleur += (min(1.3, vitesse / 3.4) - self.ampleur) * min(1.0, dt * 6)
+        self.phase += dt * vitesse * 3.3 / max(0.8, self.modele.infos["taille"])
         return d <= pas + 1e-6
+
+    def ralentir(self, dt):
+        """À l'arrêt : les jambes reviennent doucement à la verticale."""
+        self.ampleur = max(0.0, self.ampleur - dt * 4)
 
     def patrouiller(self, dt, salle):
         """Suit sa ronde : [(x, z, pause en secondes, lacet du regard pendant la pause ou None), ...]."""
@@ -163,15 +276,16 @@ class PNJ:
         if self.distrait > 0:  # un bruit : il se tourne et regarde
             self.distrait -= dt
             self.tourner_vers(self.regard, dt, 160)
-            self.ampleur = max(0.0, self.ampleur - dt * 4)
+            self.ralentir(dt)
             return
         if not self.route:
+            self.ralentir(dt)
             return
         x, z, pause, regard = self.route[self.index]
         if self.attente > 0:
             self.attente -= dt
             self.tourner_vers(self.regard + 45 * math.sin(self.t * 1.3), dt, 90)  # il regarde autour de lui
-            self.ampleur = max(0.0, self.ampleur - dt * 4)
+            self.ralentir(dt)
             if self.attente <= 0:
                 self.index = (self.index + 1) % len(self.route)
         elif self.avancer_vers(x, z, dt, salle):
@@ -197,31 +311,166 @@ class PNJ:
             return False
         return salle.vue_libre(oeil, point)
 
+    def regarder(self, point, dt):
+        """Tourne la tête vers un point (s'il est devant lui), sinon la ramène droit devant."""
+        lacet, tangage = 0.0, 0.0
+        if point is not None:
+            oeil = self.oeil()
+            dx, dy, dz = point[0] - oeil[0], point[1] - oeil[1], point[2] - oeil[2]
+            ecart = ecart_angle(self.yaw, angle_vers(dx, dz))
+            if abs(ecart) < 100:
+                lacet = -clamp(ecart, -70, 70)
+                tangage = clamp(-math.degrees(math.atan2(dy, math.hypot(dx, dz))), -25, 30)
+        k = min(1.0, dt * 4)
+        self.tete[0] += (lacet - self.tete[0]) * k
+        self.tete[1] += (tangage - self.tete[1]) * k
+
     def draw(self):
-        m = self.modele
-        glPushMatrix()
-        glTranslatef(*self.pos)
-        glRotatef(90 - self.yaw, 0, 1, 0)
-        glTranslatef(0, abs(math.sin(self.phase)) * 0.035 * self.ampleur, 0)
-        m.draw("corps")
-        balance = math.sin(self.phase) * 32 * self.ampleur
-        for partie, x, angle in (("jambe_g", 0.09, balance), ("jambe_d", -0.09, -balance)):
-            _articuler(m, partie, (x, HANCHE, 0), angle)
-        for partie, x, signe in (("bras_g", 0.235, -1), ("bras_d", -0.235, 1)):
-            if self.pose == "mains_en_l_air":
-                angle = -165
-            elif partie == "bras_d" and m.infos.get("lampe"):
-                angle = 0  # le bras qui tient la lampe reste tendu
+        A, m = self.angles(), self.modele
+        for partie in m.parties:
+            glPushMatrix()
+            self._gl(self._chaine(A, partie))
+            m.draw(partie)
+            if partie == "corps" and self.porte:
+                self.porte()
+            glPopMatrix()
+
+
+class Foule:
+    """Les figurants d'une salle : visiteurs qui vont d'une œuvre à l'autre, gardien sur sa chaise,
+    groupe autour d'une guide, attroupement devant la Joconde..."""
+
+    def __init__(self, salle):
+        self.salle, self.gens, self.chaises = salle, [], []
+        self.places = []  # (x, z, lacet, point regardé) : devant chaque œuvre
+
+    def peupler(self, n, graine=0):
+        """Remplit la salle pour la visite libre (ou le menu)."""
+        s, h = self.salle, random.Random(graine)
+        for c, normale, largeur, hauteur, *_ in s.oeuvres:
+            recul = 1.5 + 0.35 * max(largeur, hauteur)
+            for decalage in ((-0.35, 0.35) if largeur > 2.5 else (0.0,)):
+                x = c[0] + normale[0] * recul + normale[2] * decalage * largeur
+                z = c[2] + normale[2] * recul - normale[0] * decalage * largeur
+                self.places.append((x, z, angle_vers(-normale[0], -normale[2]), np.array(c, float)))
+        for x, z, cible in s.points_vue:
+            self.places.append((x, z, angle_vers(cible[0] - x, cible[2] - z), np.array(cible, float)))
+        self.places = [p for p in self.places if s.libre(p[0], p[1], s.sol_sous(p[0], p[1]))]
+        graines = h.sample(range(40), min(40, n + 12))
+        if s.chaise:
+            x, z, lacet = s.chaise
+            gardien = PNJ("", x, z, lacet, s, nom_modele=h.choice(["humain:gardien", "humain:gardienne"]))
+            gardien.pose, gardien.comportement = "assis", "assis"
+            self.gens.append(gardien)
+            self.chaises.append((x, s.sol_sous(x, z), z, lacet))
+        if s.groupe:  # une guide et son groupe devant un tableau
+            x, z, lacet, cible = s.groupe
+            guide = PNJ("", x, z, lacet - 60, s, nom_modele="humain:guide")
+            guide.comportement, guide.cible = "guide", np.array(cible, float)
+            self.gens.append(guide)
+            for k in range(5):
+                a = math.radians(lacet + 180 + (k - 2) * 26)
+                px, pz = x + math.cos(a) * 1.9 - math.cos(math.radians(lacet)) * 0.8, z + math.sin(a) * 1.9 - math.sin(math.radians(lacet)) * 0.8
+                if s.libre(px, pz, s.sol_sous(px, pz)):
+                    p = PNJ("", px, pz, angle_vers(x - px, z - pz), s, nom_modele=f"visiteur:{graines.pop()}")
+                    p.comportement, p.cible = "ecoute", guide
+                    self.gens.append(p)
+        if s.attroupement:  # la foule devant la Joconde, téléphones levés
+            cible, positions = s.attroupement
+            for x, z in positions:
+                p = PNJ("", x, z, angle_vers(cible[0] - x, cible[2] - z), s, nom_modele=f"visiteur:{graines.pop()}")
+                p.comportement, p.cible = "admire", np.array(cible, float)
+                self.gens.append(p)
+        for _ in range(min(n, len(self.places))):
+            x, z, lacet, cible = h.choice(self.places)
+            p = PNJ("", x, z, lacet, s, vitesse=h.uniform(0.9, 1.25), nom_modele=f"visiteur:{graines.pop()}")
+            p.comportement, p.cible, p.chrono, p.but = "visite", cible, h.uniform(0, 8), None
+            self.gens.append(p)
+        return self
+
+    def ajouter(self, p, comportement="reste", cible=None):
+        p.comportement, p.cible = comportement, cible
+        self.gens.append(p)
+        return p
+
+    def chemin_libre(self, a, b):
+        s = self.salle
+        n = max(2, int(math.hypot(b[0] - a[0], b[1] - a[1]) / 0.3))
+        pied = s.sol_sous(*a)
+        for k in range(1, n + 1):
+            x, z = a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n
+            if not s.libre(x, z, pied):
+                return False
+            pied = s.sol_sous(x, z)
+        return True
+
+    def update(self, dt, joueur=None, audio=None):
+        s = self.salle
+        oeil = joueur.eye() if joueur else None
+        occupees = {id(p.but) for p in self.gens if getattr(p, "but", None)}
+        for p in self.gens:
+            p.t += dt
+            proche = oeil is not None and math.hypot(oeil[0] - p.pos[0], oeil[2] - p.pos[2]) < 3.0
+            c = p.comportement
+            if c == "visite":
+                if p.but is not None:  # il marche vers l'œuvre suivante
+                    x, z, lacet, cible = p.but
+                    if p.avancer_vers(x, z, dt, s):
+                        p.but, p.cible, p.chrono = None, cible, random.uniform(5, 14)
+                        p.regard = lacet
+                        p.pose = random.choice(["normal", "normal", "mains_dos", "bras_croises"] +
+                                               ["photo", "telephone"] * (p.modele.infos["accessoire"] == "telephone"))
+                    p.regarder(oeil if proche else None, dt)
+                else:  # il regarde l'œuvre, puis choisit une autre œuvre pas trop loin
+                    p.tourner_vers(p.regard, dt, 120)
+                    p.ralentir(dt)
+                    p.regarder(oeil if proche and random.random() < 0.5 else p.cible, dt)
+                    p.chrono -= dt
+                    if p.chrono <= 0:
+                        a = (p.pos[0], p.pos[2])
+                        options = sorted((q for q in self.places if id(q) not in occupees and
+                                          0.5 < math.hypot(q[0] - a[0], q[1] - a[1]) < 14),
+                                         key=lambda q: random.random())[:6]
+                        but = next((q for q in options if self.chemin_libre(a, (q[0], q[1]))), None)
+                        if but:
+                            p.but, p.pose = but, "normal"
+                            occupees.add(id(but))
+                        p.chrono = random.uniform(2, 5)
+            elif c == "assis":
+                p.regarder(oeil if proche else p.pos + (math.cos(p.t * 0.2) * 3 + p.devant()[0] * 4, 1.2,
+                                                           math.sin(p.t * 0.2) * 3 + p.devant()[2] * 4), dt)
+            elif c == "guide":  # elle montre le tableau, puis se tourne vers son groupe
+                montre = (p.t % 9) < 4
+                p.pose = "pointe" if montre else "normal"
+                p.regarder(p.cible if montre else (oeil if proche else None), dt)
+            elif c == "ecoute":
+                p.regarder(p.cible.oeil() if (p.t % 11) < 6 else getattr(p.cible, "cible", None), dt)
+            elif c == "admire":
+                p.chrono = getattr(p, "chrono", 0.0) - dt
+                if p.chrono <= 0:
+                    p.pose, p.chrono = random.choice(["photo", "photo", "normal", "telephone", "bras_croises"]), random.uniform(4, 10)
+                p.regarder(p.cible if p.pose != "telephone" else None, dt)
             else:
-                angle = signe * balance * (1.4 if self.pose == "course" else 0.8)
-            _articuler(m, partie, (x, EPAULE, 0), angle)
-        glPopMatrix()
+                p.regarder(oeil if proche else p.cible, dt)
+            if audio and oeil is not None and p.ampleur > 0.2:  # bruits de pas des visiteurs
+                foulee = int(p.phase / math.pi)
+                if foulee != getattr(p, "foulee", foulee):
+                    audio.spatial("pas_visiteur", p.pos, joueur.pos, joueur.yaw, 9.0)
+                p.foulee = foulee
+            if joueur is not None and not joueur.flying:  # on ne traverse pas les gens
+                dx, dz = joueur.pos[0] - p.pos[0], joueur.pos[2] - p.pos[2]
+                d = math.hypot(dx, dz)
+                if 1e-6 < d < 0.55 and abs(joueur.pos[1] - p.pos[1]) < 1.0:
+                    x, z = p.pos[0] + dx / d * 0.55, p.pos[2] + dz / d * 0.55
+                    if s.libre(x, z, joueur.pos[1]):
+                        joueur.pos[0], joueur.pos[2] = x, z
 
-
-def _articuler(m, partie, pivot, angle):
-    glPushMatrix()
-    glTranslatef(*pivot)
-    glRotatef(angle, 1, 0, 0)
-    glTranslatef(-pivot[0], -pivot[1], -pivot[2])
-    m.draw(partie)
-    glPopMatrix()
+    def draw(self):
+        for x, y, z, lacet in self.chaises:
+            glPushMatrix()
+            glTranslatef(x, y, z)
+            glRotatef(90 - lacet, 0, 1, 0)
+            modele("chaise").draw()
+            glPopMatrix()
+        for p in self.gens:
+            p.draw()

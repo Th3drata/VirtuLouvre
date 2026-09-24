@@ -1,10 +1,11 @@
 """Modèles 3D du jeu, construits en code à partir de formes simples (NumPy) : personnages, statues,
 joyaux, mobilier, indices... Aucun fichier à charger : tout est calculé au lancement.
 
-Un modèle est un ensemble de « parties » (pour animer les personnages : jambes, bras...) ;
+Un modèle est un ensemble de « parties » (pour animer les personnages : cuisses, avant-bras, tête...) ;
 chaque partie regroupe ses triangles par matériau (or, marbre, uniforme...)."""
 
 import math
+import random
 
 import numpy as np
 from OpenGL.GL import *
@@ -284,7 +285,7 @@ class Modele:
             liste = glGenLists(1)
             glNewList(liste, GL_COMPILE)
             for mat, (tris, norms) in forme.tableaux().items():
-                couleur, reflet, durete, emission = MATERIAUX[mat]
+                couleur, reflet, durete, emission = materiau(mat)
                 glColor3f(*couleur)
                 glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, (reflet, reflet, reflet, 1.0))
                 glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, durete)
@@ -457,72 +458,250 @@ def couronne():
 
 
 # ---------------------------------------------------------------------------
-# Personnages (5 parties animées : corps, jambes, bras)
+# Personnages : 10 parties articulées (corps, tête, cuisses, jambes, bras, avant-bras)
 # ---------------------------------------------------------------------------
 
-HANCHE, EPAULE = 0.86, 1.33  # hauteur des articulations
-LAMPE = np.array((-0.235, 1.13, 0.52))  # bout de la lampe (bras droit tendu), repère du personnage
 
-TENUES = {
-    "gardien": dict(haut="uniforme", bas="uniforme", peau="peau", tete="casquette", gilet=False, lampe=True, manteau=False),
-    "voleur": dict(haut="sweat", bas="jean", peau="peau2", tete="casque", gilet=True, lampe=False, manteau=False),
-    "guetteur": dict(haut="sweat", bas="jean", peau="peau", tete="bonnet", gilet=True, lampe=True, manteau=False),
-    "chef": dict(haut="manteau", bas="noir", peau="peau", tete="chapeau", gilet=False, lampe=False, manteau=True),
+def rgb(couleur):
+    """Matériau « tissu » d'une couleur quelconque (0-255) : "rgb:r,g,b"."""
+    return "rgb:%d,%d,%d" % tuple(couleur)
+
+
+def materiau(nom):
+    if nom.startswith("rgb:"):
+        return tuple(int(v) / 255 for v in nom[4:].split(",")), 0.06, 8, None
+    return MATERIAUX[nom]
+
+
+def ellipsoide(rx, ry, rz, centre, n=14, m=9):
+    return deplacer(etirer(sphere(1, n, m), (rx, ry, rz)), centre)
+
+
+def filtrer(geo, garder):
+    """Garde les triangles dont le centre vérifie garder(x, y, z) (pour tailler une coiffure, une cagoule...)."""
+    c = geo[0].mean(1)
+    m = garder(c[:, 0], c[:, 1], c[:, 2])
+    return geo[0][m], geo[1][m]
+
+
+ARTICULATIONS = {  # personnage de taille 1, debout, qui regarde vers +z (côté g : x > 0)
+    "cou": (0.0, 1.44, 0.0), "bassin": (0.0, 0.86, 0.0),
+    "hanche_g": (0.09, 0.86, 0.0), "genou_g": (0.092, 0.47, 0.0), "hanche_d": (-0.09, 0.86, 0.0), "genou_d": (-0.092, 0.47, 0.0),
+    "epaule_g": (0.205, 1.32, 0.0), "coude_g": (0.215, 1.07, 0.0), "epaule_d": (-0.205, 1.32, 0.0), "coude_d": (-0.215, 1.07, 0.0),
+}
+BOUT_LAMPE = (-0.222, 0.6, 0.0)  # la lampe prolonge l'avant-bras droit et éclaire dans son axe
+PEAUX = [(236, 200, 172), (224, 178, 142), (198, 144, 106), (160, 110, 76), (116, 78, 52), (84, 56, 38)]
+CHEVEUX = [(24, 20, 18), (58, 38, 26), (96, 64, 38), (196, 160, 96), (140, 70, 36), (150, 148, 144), (225, 222, 215)]
+HAUTS = [(30, 40, 90), (160, 30, 40), (235, 235, 230), (200, 180, 140), (40, 90, 60), (210, 160, 40), (25, 25, 28),
+         (120, 120, 125), (120, 170, 220), (110, 30, 50), (220, 140, 160), (230, 110, 50)]
+BAS = [(40, 60, 110), (25, 25, 30), (190, 170, 130), (90, 90, 95), (80, 55, 35), (50, 70, 50)]
+CHAUSSURES = [(240, 240, 240), (20, 20, 22), (90, 55, 30), (60, 60, 65)]
+UNIFORME, UNIFORME_POLICE, SWEAT, JEAN, NOIR = (24, 30, 60), (26, 36, 78), (52, 52, 56), (40, 60, 110), (22, 22, 24)
+ROLES = {  # les personnages de l'histoire ; les visiteurs, eux, sont tirés au hasard
+    "gardien": dict(haut=UNIFORME, bas=UNIFORME, chaussures=NOIR, coiffe="kepi", accessoire="lampe", badge="or", radio=True),
+    "gardienne": dict(haut=UNIFORME, bas=UNIFORME, chaussures=NOIR, coiffure="chignon", femme=True, badge="or", radio=True),
+    "police": dict(haut=UNIFORME_POLICE, bas=UNIFORME_POLICE, chaussures=NOIR, coiffe="casquette_police",
+                   accessoire="lampe", badge="argent", radio=True, bande=True),
+    "voleur": dict(haut=SWEAT, bas=JEAN, chaussures=(60, 60, 65), coiffe="casque", gilet=True, gants=True, peau=PEAUX[3]),
+    "guetteur": dict(haut=SWEAT, bas=JEAN, chaussures=NOIR, coiffe="bonnet", gilet=True, accessoire="lampe", masque=True,
+                     gants=True),
+    "chef": dict(haut=(28, 26, 26), bas=NOIR, chaussures=NOIR, coiffe="chapeau", manteau=True, gants=True,
+                 echarpe=(150, 20, 30), barbe=True, cheveux=CHEVEUX[5], peau=PEAUX[1]),
+    "conservatrice": dict(haut=(46, 46, 58), bas=(46, 46, 58), chaussures=NOIR, coiffure="chignon", jupe=True, femme=True,
+                          lunettes=True, badge="blanc", cheveux=CHEVEUX[1], peau=PEAUX[0]),
+    "guide": dict(haut=(200, 60, 40), bas=(40, 40, 48), chaussures=NOIR, coiffure="queue", femme=True, accessoire="parapluie",
+                  badge="blanc", audioguide=True),
 }
 
 
-def humain(tenue):
-    t = TENUES[tenue]
-    corps = Forme()
-    corps.add(t["haut"], etirer(cylindre(0.115, 0.125, 0.84, 1.34, 14), (1.6, 1, 1)))
-    corps.add(t["haut"], deplacer(etirer(sphere(1, 14, 8), (0.215, 0.075, 0.125)), (0, 1.33, 0)))
-    corps.add(t["bas"], etirer(cylindre(0.118, 0.112, 0.76, 0.9, 14), (1.5, 1, 1)))
-    corps.add("noir", etirer(cylindre(0.122, 0.122, 0.86, 0.9, 14, False), (1.52, 1, 1.02)))  # ceinture
-    corps.add(t["peau"], cylindre(0.045, 0.048, 1.34, 1.46, 10))
-    corps.add(t["peau"], deplacer(etirer(sphere(1, 16, 10), (0.09, 0.115, 0.1)), (0, 1.54, 0)))
-    corps.add(t["peau"], deplacer(etirer(sphere(1, 6, 4), (0.016, 0.028, 0.02)), (0, 1.53, 0.1)))
-    for x in (-0.035, 0.035):
-        corps.add("noir", deplacer(sphere(0.012, 6, 4), (x, 1.56, 0.09)))
-    if t["tete"] == "casquette":
-        corps.add("uniforme", cylindre(0.098, 0.102, 1.585, 1.665, 16))
-        corps.add("noir", deplacer(etirer(cylindre(0.08, 0.08, 0, 0.012, 12), (1, 1, 0.7)), (0, 1.585, 0.1)))
-        corps.add("or", boite(-0.015, 1.61, 0.098, 0.015, 1.64, 0.105))
-    elif t["tete"] == "casque":
-        corps.add("jaune", revolution([(0.12, 1.59), (0.118, 1.63), (0.1, 1.68), (0.06, 1.71), (0.0, 1.72)], 16))
-        corps.add("jaune", cylindre(0.14, 0.14, 1.585, 1.595, 16))
-    elif t["tete"] == "bonnet":
-        corps.add("noir", revolution([(0.103, 1.57), (0.102, 1.62), (0.08, 1.67), (0.0, 1.69)], 14))
-    else:  # chapeau
-        corps.add("noir", cylindre(0.1, 0.095, 1.6, 1.72, 16), cylindre(0.17, 0.17, 1.6, 1.61, 20))
-    if t["gilet"]:
-        corps.add("fluo", etirer(cylindre(0.128, 0.137, 0.92, 1.34, 14, False), (1.62, 1, 1)))
-        for y in (1.02, 1.17):
-            corps.add("reflechissant", etirer(cylindre(0.131, 0.132, y, y + 0.03, 14, False), (1.63, 1, 1.01)))
-    if t["manteau"]:
-        corps.add("manteau", etirer(revolution([(0.25, 0.3), (0.2, 0.85), (0.13, 0.95)], 16), (1.35, 1, 1)))
-        corps.add("manteau", etirer(cylindre(0.1, 0.11, 1.34, 1.42, 12, False), (1.4, 1, 1)))
-    if tenue == "gardien":
-        corps.add("or", boite(0.07, 1.2, 0.123, 0.12, 1.26, 0.132))
+def tirer_tenue(role, graine):
+    """Tenue d'un rôle, ou tenue de visiteur tirée au hasard (toujours la même pour une même graine)."""
+    h = random.Random(graine if role is None else role)
+    if role:
+        t = dict(ROLES[role])
+    else:
+        femme = h.random() < 0.5
+        t = dict(femme=femme, haut=h.choice(HAUTS), bas=h.choice(BAS), chaussures=h.choice(CHAUSSURES),
+                 coiffure=h.choice(["long", "chignon", "queue", "court", "boucle", "long"] if femme else
+                                   ["court", "court", "chauve", "boucle", "court"]),
+                 jupe=femme and h.random() < 0.35, sac=h.random() < 0.35, lunettes=h.random() < 0.25,
+                 barbe=not femme and h.random() < 0.3, coiffe=h.choice([None] * 7 + ["beret", "casquette", "bob"]),
+                 audioguide=h.random() < 0.2, accessoire=h.choice([None, "telephone", "telephone"]),
+                 manches_courtes=h.random() < 0.3, couleur_coiffe=h.choice(HAUTS), couleur_sac=h.choice(HAUTS))
+    t.setdefault("coiffure", "court")
+    t.setdefault("peau", h.choice(PEAUX))
+    t.setdefault("cheveux", h.choice(CHEVEUX[:5]) if h.random() < 0.85 else h.choice(CHEVEUX[5:]))
+    t["taille"] = h.uniform(0.94, 1.06) * (0.96 if t.get("femme") else 1.0)
+    t["carrure"] = h.uniform(0.92, 1.1) * (0.93 if t.get("femme") else 1.0)
+    return t
 
-    jambes = {}
-    for nom, x in (("jambe_g", 0.09), ("jambe_d", -0.09)):
-        jambe = Forme().add(t["bas"], deplacer(cylindre(0.052, 0.07, 0.08, HANCHE, 10), (x, 0, 0)))
-        jambe.add("noir", boite(x - 0.05, 0.0, -0.06, x + 0.05, 0.09, 0.15))
-        jambes[nom] = jambe
-    bras = {}
-    for nom, x in (("bras_g", 0.235), ("bras_d", -0.235)):
-        b = Forme()
-        if nom == "bras_d" and t["lampe"]:  # bras tendu qui tient la lampe
-            b.add(t["haut"], tube([(x, EPAULE, 0), (x, 1.1, 0.03)], 0.047, 8))
-            b.add(t["haut"], tube([(x, 1.1, 0.03), (x, 1.12, 0.3)], 0.04, 8))
-            b.add(t["peau"], deplacer(sphere(0.045, 10, 6), (x, 1.12, 0.33)))
-            b.add("noir", deplacer(tourner(cylindre(0.03, 0.04, 0.0, 0.2, 12), "x", 90), (x, 1.13, 0.32)))
-            b.add("ampoule", deplacer(tourner(disque(0.036, 0.0, True, 12), "x", 90), (x, 1.13, LAMPE[2] + 0.005)))
-        else:
-            b.add(t["haut"], tube([(x, EPAULE, 0), (x * 1.04, 1.06, 0), (x * 1.04, 0.87, 0.02)], [0.05, 0.043, 0.037], 8))
-            b.add(t["peau"], deplacer(sphere(0.045, 10, 6), (x * 1.04, 0.83, 0.02)))
-        bras[nom] = b
-    return Modele({"corps": corps, **jambes, **bras}, lampe=t["lampe"])
+
+def _tete(t):
+    """La tête (elle tourne autour du cou) : visage, coiffure, couvre-chef, lunettes..."""
+    f = Forme()
+    peau, cheveux = rgb(t["peau"]), rgb(t["cheveux"])
+    c = np.array((0.0, 1.565, 0.0))
+    f.add(peau, ellipsoide(0.083, 0.102, 0.094, c, 18, 12), ellipsoide(0.062, 0.05, 0.068, (0, 1.505, 0.022)))
+    f.add(peau, ellipsoide(0.013, 0.026, 0.022, (0, 1.545, 0.092), 8, 6))  # nez
+    f.add(rgb([int(v * 0.7) for v in t["peau"]]), boite(-0.018, 1.507, 0.084, 0.018, 1.514, 0.094))  # bouche
+    for s in (1, -1):
+        f.add(peau, ellipsoide(0.012, 0.026, 0.018, (s * 0.083, 1.555, 0.0), 8, 6))  # oreilles
+        f.add("blanc", ellipsoide(0.016, 0.01, 0.008, (s * 0.031, 1.577, 0.083), 8, 6))
+        f.add("noir", ellipsoide(0.0075, 0.0075, 0.005, (s * 0.031, 1.577, 0.089), 8, 5))
+        f.add(cheveux, boite(s * 0.015, 1.597, 0.082, s * 0.049, 1.604, 0.09))  # sourcils
+    style, coiffe = t["coiffure"], t.get("coiffe")
+    if style == "chauve":  # une couronne de cheveux autour de la nuque
+        f.add(cheveux, filtrer(ellipsoide(0.087, 0.104, 0.098, c, 18, 12),
+                               lambda x, y, z: (np.abs(y - c[1] + 0.01) < 0.03) & (z < 0.03)))
+    elif coiffe != "bonnet":
+        volume = 1.18 if style == "boucle" else 1.0
+        calotte = ellipsoide(0.09 * volume, 0.108 * volume, 0.1 * volume, c + (0, 0.008, -0.006), 18, 12)
+        f.add(cheveux, filtrer(calotte, lambda x, y, z: y > c[1] + 0.01 + 0.55 * z))
+        if style == "long":
+            f.add(cheveux, ellipsoide(0.092, 0.15, 0.05, (0, 1.47, -0.06)))
+            for s in (1, -1):
+                f.add(cheveux, ellipsoide(0.026, 0.12, 0.045, (s * 0.078, 1.5, -0.015), 8, 8))
+        elif style == "chignon":
+            f.add(cheveux, ellipsoide(0.045, 0.045, 0.045, (0, 1.64, -0.088), 12, 8))
+        elif style == "queue":
+            f.add(cheveux, tube([(0, 1.6, -0.095), (0, 1.53, -0.13), (0, 1.42, -0.12)], [0.03, 0.025, 0.015], 8))
+    if t.get("barbe"):
+        f.add(cheveux, filtrer(ellipsoide(0.067, 0.057, 0.073, (0, 1.505, 0.024)), lambda x, y, z: (y < 1.515) & (z > -0.02)))
+        f.add(cheveux, boite(-0.024, 1.518, 0.088, 0.024, 1.527, 0.096))  # moustache
+    if t.get("masque"):  # le guetteur cache le bas de son visage
+        f.add("noir", filtrer(ellipsoide(0.089, 0.108, 0.1, c + (0, 0, 0.002), 18, 12),
+                              lambda x, y, z: (y < 1.563) | (y > 1.592) | (z < 0.02)),  # une fente pour les yeux
+              ellipsoide(0.066, 0.052, 0.072, (0, 1.505, 0.024)), ellipsoide(0.017, 0.029, 0.026, (0, 1.543, 0.093), 8, 6))
+    if t.get("lunettes"):
+        for s in (1, -1):
+            f.add("noir", deplacer(tourner(tore(0.022, 0.0035, n=16, m=4), "x", 90), (s * 0.032, 1.577, 0.097)))
+            f.add("noir", boite(s * 0.053, 1.575, 0.0, s * 0.057, 1.58, 0.096))
+        f.add("noir", boite(-0.011, 1.578, 0.095, 0.011, 1.582, 0.099))
+    if t.get("audioguide"):
+        f.add("noir", deplacer(tourner(tore(0.1, 0.006, 0, math.pi, 16, 4), "x", -90), (0, 1.565, 0)))
+        for s in (1, -1):
+            f.add("noir", deplacer(tourner(cylindre(0.024, 0.024, -0.012, 0.012, 12), "z", 90), (s * 0.096, 1.555, 0)))
+    teinte = rgb(t.get("couleur_coiffe", (30, 30, 30)))
+    visiere = deplacer(etirer(cylindre(0.078, 0.078, 0, 0.01, 14), (1, 1, 0.7)), (0, 1.6, 0.095))
+    if coiffe == "kepi":
+        f.add("uniforme", cylindre(0.1, 0.105, 1.6, 1.685, 18))
+        f.add("noir", visiere)
+        f.add("or", boite(-0.015, 1.625, 0.1, 0.015, 1.655, 0.108))
+    elif coiffe == "casquette_police":
+        f.add("uniforme", cylindre(0.1, 0.104, 1.6, 1.645, 18), ellipsoide(0.125, 0.03, 0.125, (0, 1.66, 0.005), 18, 8))
+        f.add("noir", visiere)
+        f.add("argent", boite(-0.012, 1.615, 0.101, 0.012, 1.64, 0.108))
+    elif coiffe == "casque":
+        f.add("jaune", revolution([(0.12, 1.59), (0.118, 1.63), (0.1, 1.68), (0.06, 1.71), (0.0, 1.72)], 16))
+        f.add("jaune", cylindre(0.14, 0.14, 1.585, 1.595, 16))
+    elif coiffe == "bonnet":
+        f.add("noir", revolution([(0.1, 1.598), (0.104, 1.62), (0.086, 1.668), (0.0, 1.69)], 16))
+    elif coiffe == "chapeau":
+        f.add("noir", cylindre(0.102, 0.096, 1.61, 1.72, 18), cylindre(0.165, 0.165, 1.605, 1.615, 22))
+        f.add("velours", cylindre(0.103, 0.101, 1.615, 1.637, 18, False))
+    elif coiffe == "beret":
+        f.add(teinte, deplacer(tourner(etirer(sphere(1, 16, 8), (0.112, 0.035, 0.112)), "z", 12), (0.012, 1.66, -0.005)))
+    elif coiffe == "casquette":
+        f.add(teinte, filtrer(ellipsoide(0.1, 0.105, 0.108, c + (0, 0.02, 0), 16, 10), lambda x, y, z: y > 1.6))
+        f.add(teinte, deplacer(etirer(cylindre(0.08, 0.08, 0, 0.01, 14), (1, 1, 0.8)), (0, 1.605, 0.105)))
+    elif coiffe == "bob":
+        f.add(teinte, cylindre(0.104, 0.098, 1.6, 1.68, 16), revolution([(0.16, 1.585), (0.104, 1.615)], 18))
+    return f
+
+
+def personnage(role=None, graine=0):
+    """Un personnage articulé : un rôle de l'histoire (ROLES), ou un visiteur tiré au hasard (graine)."""
+    t = tirer_tenue(role, graine)
+    P = ARTICULATIONS
+    peau, haut, bas, chaussure = rgb(t["peau"]), rgb(t["haut"]), rgb(t["bas"]), rgb(t["chaussures"])
+    mains = "noir" if t.get("gants") else peau
+    corps = Forme()
+    if t.get("femme"):
+        bassin = [(0.0, 0.79), (0.118, 0.8), (0.13, 0.88), (0.104, 0.95)]
+        buste = [(0.104, 0.95), (0.1, 0.99), (0.108, 1.1), (0.122, 1.2), (0.115, 1.29), (0.09, 1.35), (0.04, 1.38)]
+    else:
+        bassin = [(0.0, 0.79), (0.115, 0.8), (0.118, 0.88), (0.11, 0.95)]
+        buste = [(0.11, 0.95), (0.108, 0.99), (0.118, 1.1), (0.13, 1.21), (0.128, 1.29), (0.1, 1.35), (0.04, 1.38)]
+    corps.add(bas, etirer(revolution(bassin, 18), (1.5, 1, 0.95)))
+    corps.add(haut, etirer(revolution(buste, 18), (1.55, 1, 0.95)))
+    for s in (1, -1):
+        corps.add(haut, ellipsoide(0.06, 0.052, 0.064, (s * 0.192, 1.31, 0.0), 12, 8))  # épaules
+    corps.add(peau, cylindre(0.05, 0.055, 1.34, 1.47, 12))  # cou
+    corps.add("noir", etirer(cylindre(0.114, 0.114, 0.92, 0.955, 18, False), (1.52, 1, 0.97)))  # ceinture
+    if t.get("jupe"):
+        corps.add(bas, etirer(revolution([(0.105, 0.96), (0.14, 0.8), (0.18, 0.55), (0.0, 0.55)], 18), (1.35, 1, 1.1)))
+    if t.get("manteau"):
+        corps.add(haut, etirer(revolution([(0.0, 0.3), (0.25, 0.3), (0.19, 0.85), (0.13, 1.0)], 18), (1.35, 1, 1.05)))
+        corps.add(haut, etirer(cylindre(0.1, 0.112, 1.33, 1.43, 14, False), (1.35, 1, 1)))  # col relevé
+    if t.get("echarpe"):
+        corps.add(rgb(t["echarpe"]), deplacer(tore(0.058, 0.022, n=18, m=6), (0, 1.38, 0.005)),
+                  boite(0.02, 1.12, 0.13, 0.07, 1.37, 0.155))
+    if t.get("gilet"):
+        corps.add("fluo", etirer(cylindre(0.122, 0.132, 0.95, 1.33, 18, False), (1.6, 1, 1)))
+        for y in (1.04, 1.18):
+            corps.add("reflechissant", etirer(cylindre(0.124, 0.126, y, y + 0.03, 18, False), (1.61, 1, 1.01)))
+    if t.get("bande"):
+        corps.add("reflechissant", etirer(cylindre(0.131, 0.131, 1.16, 1.19, 18, False), (1.56, 1, 0.96)))
+    if t.get("badge"):
+        corps.add(t["badge"], boite(0.06, 1.19, 0.117, 0.11, 1.245, 0.125))
+    if t.get("radio"):
+        corps.add("noir", boite(-0.2, 0.88, -0.03, -0.16, 1.0, 0.04))
+        corps.add("noir", tube([(-0.17, 1.0, 0.0), (-0.1, 1.2, 0.1), (-0.06, 1.3, 0.12)], 0.006, 4))
+    if t.get("sac"):
+        couleur_sac = rgb(t["couleur_sac"])
+        corps.add(couleur_sac, ellipsoide(0.13, 0.17, 0.07, (0, 1.14, -0.16)))
+        for s in (1, -1):
+            corps.add(couleur_sac, tube([(s * 0.1, 1.34, 0.03), (s * 0.12, 1.3, -0.12), (s * 0.1, 1.0, -0.13)], 0.012, 5))
+    parties = {"corps": corps, "tete": _tete(t)}
+    courtes, jambes_nues = t.get("manches_courtes"), t.get("jupe")
+    for cote, s in (("g", 1), ("d", -1)):
+        hanche, genou = np.array(P["hanche_" + cote]), np.array(P["genou_" + cote])
+        cheville = np.array((genou[0] + s * 0.002, 0.08, 0.0))
+        parties["cuisse_" + cote] = Forme().add(peau if jambes_nues else bas,
+                                                tube([hanche + (0, 0.04, 0), hanche, genou], [0.072, 0.074, 0.056], 10))
+        jambe = Forme().add(peau if jambes_nues else bas, tube([genou, cheville], [0.054, 0.037], 10))
+        jambe.add(chaussure, ellipsoide(0.047, 0.042, 0.115, (cheville[0], 0.045, 0.035), 12, 8))
+        jambe.add("noir", boite(cheville[0] - 0.045, 0.0, -0.075, cheville[0] + 0.045, 0.014, 0.145))
+        parties["jambe_" + cote] = jambe
+        epaule, coude = np.array(P["epaule_" + cote]), np.array(P["coude_" + cote])
+        poignet = coude + (s * 0.007, -0.23, 0)
+        bras = Forme().add(haut, tube([epaule, coude + (0, 0.08, 0) if courtes else coude], [0.046, 0.042], 10))
+        if courtes:
+            bras.add(peau, tube([coude + (0, 0.09, 0), coude], [0.036, 0.038], 10))
+        parties["bras_" + cote] = bras
+        avant = Forme().add(peau if courtes else haut, tube([coude, poignet], [0.039, 0.031], 10))
+        main = poignet - (0, 0.05, 0)
+        avant.add(mains, ellipsoide(0.026, 0.048, 0.02, main, 10, 7),
+                  tube([poignet + (0, -0.015, 0.012), main + (0, -0.005, 0.03)], 0.01, 5))  # pouce
+        accessoire = t.get("accessoire") if cote == "d" else None
+        if accessoire == "lampe":
+            x, y, z = BOUT_LAMPE
+            avant.add("noir", deplacer(cylindre(0.026, 0.02, 0.0, 0.21, 12), (x, y, z)))
+            avant.add("ampoule", deplacer(disque(0.022, 0.0, False, 12), (x, y - 0.002, z)))
+        elif accessoire == "telephone":
+            avant.add("noir", boite(main[0] - 0.026, main[1] - 0.06, 0.022, main[0] + 0.026, main[1] + 0.045, 0.032))
+            avant.add("ecran", boite(main[0] - 0.022, main[1] - 0.055, 0.032, main[0] + 0.022, main[1] + 0.04, 0.034))
+        elif accessoire == "parapluie":  # le parapluie de la guide prolonge son bras (pour montrer les tableaux)
+            avant.add("metal", tube([main + (0, 0.03, 0), main - (0, 0.62, 0)], 0.007, 5))
+            avant.add(rgb((230, 170, 30)), deplacer(revolution([(0.012, -0.58), (0.045, -0.4), (0.03, -0.1), (0.008, -0.02)], 10),
+                                                    main))
+        parties["avantbras_" + cote] = avant
+    k = np.array((t["carrure"], t["taille"], t["carrure"]))
+    for nom in parties:
+        parties[nom] = parties[nom].scaled(k)
+    articulations = {nom: np.array(p) * k for nom, p in P.items()}
+    return Modele(parties, articulations=articulations, lampe=t.get("accessoire") == "lampe",
+                  bout_lampe=np.array(BOUT_LAMPE) * k, taille=t["taille"], accessoire=t.get("accessoire"))
+
+
+def chaise():
+    """Chaise de gardien de salle."""
+    f = Forme().add("bois", boite(-0.22, 0.44, -0.22, 0.22, 0.48, 0.22), boite(-0.22, 0.48, -0.24, 0.22, 0.95, -0.2))
+    for x in (-0.19, 0.19):
+        for z in (-0.19, 0.19):
+            f.add("bois", boite(x - 0.02, 0.0, z - 0.02, x + 0.02, 0.44, z + 0.02))
+    f.add("velours", boite(-0.2, 0.48, -0.19, 0.2, 0.51, 0.2))
+    return Modele(f)
 
 
 # ---------------------------------------------------------------------------
@@ -861,17 +1040,19 @@ FABRIQUES = {
     "emetteur": emetteur, "panneau_alarme": panneau_alarme, "brasero": brasero, "barriere": barriere,
     "vitrine_joconde": vitrine_joconde, "gant": gant, "badge": badge, "camera": camera_cachee, "carnet": carnet,
     "plan": plan, "ruban": ruban, "empreintes": empreintes, "couronne": couronne, "victoire": victoire,
-    "sphinx": sphinx, "cariatide": cariatide, "main_victoire": main_victoire,
+    "sphinx": sphinx, "cariatide": cariatide, "main_victoire": main_victoire, "chaise": chaise,
 }
 _CACHE = {}
 
 
 def modele(nom):
-    """modele("victoire"), modele("humain:gardien"), modele("joyau:3"), modele("statue:2"), modele("stele:ibis")..."""
+    """modele("victoire"), modele("humain:gardien"), modele("visiteur:7"), modele("joyau:3"), modele("statue:2"), modele("stele:ibis")..."""
     if nom not in _CACHE:
         base, _, parametre = nom.partition(":")
         if base == "humain":
-            _CACHE[nom] = humain(parametre)
+            _CACHE[nom] = personnage(parametre)
+        elif base == "visiteur":
+            _CACHE[nom] = personnage(None, int(parametre))
         elif base == "joyau":
             _CACHE[nom] = joyau(int(parametre))
         elif base == "statue":

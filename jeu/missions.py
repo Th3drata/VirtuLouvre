@@ -43,6 +43,7 @@ class Mission:
     duree = None  # temps limite en secondes (None : pas de limite)
     eclairage = 0.6  # intensité des lumières de la salle (0 : éteintes)
     lampe = True  # lampe torche allumée au départ
+    musique, ambiance = "enquete", "nuit"  # voir sons.MUSIQUES et sons.AMBIANCES
     endurance = False  # course limitée par le souffle
     astuces = ()
     fin_temps = "Le temps est écoulé."
@@ -161,7 +162,7 @@ class MissionJoyaux(Mission):
             if not j["trouve"] and math.hypot(d[0], d[2]) < PICK_RADIUS and abs(d[1]) < 2.0:
                 j["trouve"] = True
                 self.app.notice(j["nom"], "retrouvé !")
-                self.app.audio.play("pickup")
+                self.app.audio.play("joyau")
                 self.app.burst(j["pos"], j["couleur"])
         restants = [j for j in self.joyaux if not j["trouve"]]
         if not restants:
@@ -172,7 +173,7 @@ class MissionJoyaux(Mission):
         self.bip -= dt
         self.flash = max(0.0, self.flash - dt * 4)
         if self.bip <= 0:  # détecteur : de plus en plus rapide près du joyau le plus proche
-            self.app.audio.play("beep_near" if distance < 4 else "beep_mid" if distance < 10 else "beep_far")
+            self.app.audio.play("sonar_proche" if distance < 4 else "sonar_moyen" if distance < 10 else "sonar_loin")
             self.bip, self.flash = min(1.6, 0.12 + 0.07 * distance), 1.0
 
     def lueur(self, cam, p):
@@ -258,8 +259,9 @@ class MissionIndices(Mission):
     nuit = 2
     titre = "Les indices de la Joconde"
     heure = "Nuit 2 — samedi, minuit"
-    intro = ("Salle des États, le rendez-vous du ticket. Personne... mais le Cercle est passé par là : il a laissé des "
-             "traces. Fouille la salle à la lampe, examine chaque indice, puis devine son prochain coup.")
+    intro = ("Salle des États, le rendez-vous du ticket. Le Cercle n'est pas venu... mais il est passé par là : il a "
+             "laissé des traces. La conservatrice t'ouvre la salle : fouille-la à la lampe, examine chaque indice, puis "
+             "devine son prochain coup.")
     objectif = "Trouver les 6 indices"
     duree = 360
     eclairage = 0.45
@@ -268,10 +270,20 @@ class MissionIndices(Mission):
     victoire = ("Tout concorde : le Cercle va voler un tableau de la Grande Galerie, déguisé en équipe de restauration, "
                 "pendant les travaux. Le conservateur t'envoie surveiller l'échafaudage...")
     fin_temps = "Le jour se lève : les indices seront effacés par le ménage."
+    ambiance = "pluie"
 
     def demarrer(self):
         self.trouves = [False] * len(INDICES)
         self.question = 0
+        self.conservatrice = self.app.foule.ajouter(PNJ("conservatrice", -2.3, 13.6, yaw=-40, salle=self.salle))
+        self.conservatrice.pose = "bras_croises"
+
+    def parler(self):
+        n = sum(self.trouves)
+        conseil = ("« Ils sont passés pendant la ronde de minuit. Regardez partout : par terre, sur les bancs... et même "
+                   "en hauteur, sur les cadres. »" if n < 3 else "« Vous avancez bien. N'oubliez pas la Joconde : ils "
+                   "ont sûrement voulu tester sa vitre. »" if n < 6 else "« Alors, qu'est-ce qu'ils préparent ? »")
+        self.app.ouvrir_examen("La conservatrice", conseil, f"{n} indice{'s' if n > 1 else ''} sur {len(INDICES)}", None)
 
     def examiner(self, k):
         self.trouves[k] = True
@@ -298,7 +310,8 @@ class MissionIndices(Mission):
 
     def interactions(self):
         return [Interaction(np.asarray(pos) + (0, 0.05, 0), "Examiner", lambda k=k: self.examiner(k), rayon)
-                for k, (_, pos, _, _, rayon, _, _) in enumerate(INDICES) if not self.trouves[k]]
+                for k, (_, pos, _, _, rayon, _, _) in enumerate(INDICES) if not self.trouves[k]] + \
+            [Interaction(self.conservatrice.oeil() - (0, 0.3, 0), "Parler à la conservatrice", self.parler, 2.6)]
 
     def draw3d(self, cam):
         for k, (nom, pos, lacet, echelle, *_rest) in enumerate(INDICES):
@@ -340,6 +353,7 @@ class MissionPoursuite(Mission):
     eclairage = 0.75
     lampe = False
     endurance = True
+    musique = "poursuite"
     astuces = ("Maj pour courir : attention à ton souffle, il se recharge quand tu marches.",
                "Coupe les virages : il zigzague entre les bancs.")
     victoire = ("Le faux restaurateur est arrêté, La Belle Ferronnière sous le bras. Il avoue : le butin du Cercle est caché "
@@ -348,11 +362,14 @@ class MissionPoursuite(Mission):
 
     def demarrer(self):
         self.voleur = PNJ("voleur", 2.6, 44.5, yaw=-90, salle=self.salle, vitesse=VITESSE_VOLEUR[0])
-        self.voleur.pose = "course"
+        self.voleur.pose, self.voleur.porte = "porte", self.dessiner_tableau
+        self.gardien = PNJ("gardien", -1.2, 64.8, yaw=-90, salle=self.salle, vitesse=2.9)  # il arrive en renfort
+        self.gardien.etape = 0
         self.etape, self.pause, self.lent, self.attrape = 0, 1.0, 0.0, None
         self.obstacles = []
         self.distance = 12.0
         self.app.notice("Hé ! Arrêtez-vous !", "", RED)
+        self.app.audio.play("sifflet")
 
     def update(self, dt):
         v, joueur = self.voleur, self.app.player
@@ -360,13 +377,15 @@ class MissionPoursuite(Mission):
         self.distance = distance
         if self.attrape is not None:
             self.attrape -= dt
+            self.suivre_gardien(dt)
             if self.attrape <= 0:
                 self.gagner()
             return
+        self.suivre_gardien(dt)
         if distance < 1.3:  # rattrapé !
-            v.pose, v.ampleur, self.attrape = "mains_en_l_air", 0.0, 1.4
+            v.pose, v.ampleur, v.porte, self.attrape = "mains_en_l_air", 0.0, None, 1.4
             v.yaw = angle_vers(joueur.pos[0] - v.pos[0], joueur.pos[2] - v.pos[2])
-            self.app.audio.play("arrestation")
+            self.app.audio.play("menottes")
             self.app.notice("Arrêté !", "Le voleur lève les mains.", GREEN)
             return
         if self.pause > 0:
@@ -392,6 +411,33 @@ class MissionPoursuite(Mission):
             self.app.audio.spatial("pas", v.pos, joueur.pos, joueur.yaw)
         v.foulee = foulee
 
+    def suivre_gardien(self, dt):
+        """Le gardien de nuit court derrière, sur le chemin du voleur, et s'arrête près de lui s'il est pris."""
+        g, v = self.gardien, self.voleur
+        if self.temps < 1.5:  # il vient de siffler
+            return
+        if math.hypot(g.pos[0] - v.pos[0], g.pos[2] - v.pos[2]) < 2.6 and self.attrape is not None:
+            g.ralentir(dt)
+            g.tourner_vers(angle_vers(v.pos[0] - g.pos[0], v.pos[2] - g.pos[2]), dt)
+            return
+        x, z = ROUTE_VOLEUR[min(g.etape, self.etape, len(ROUTE_VOLEUR) - 1)]
+        if g.avancer_vers(x, z, dt, self.salle) and g.etape < self.etape:
+            g.etape += 1
+
+    def dessiner_tableau(self):
+        """La Belle Ferronnière, serrée contre le voleur (dessinée dans le repère de son buste)."""
+        rendu.draw_box(-0.2, 0.9, 0.16, 0.2, 1.42, 0.2, (0.8, 0.62, 0.25))
+        glEnable(GL_TEXTURE_2D)
+        glBindTexture(GL_TEXTURE_2D, rendu.texture("tableau:belle_ferronniere"))
+        glColor3f(1, 1, 1)
+        glNormal3f(0, 0, 1)
+        glBegin(GL_QUADS)
+        for (u, w), (x, y) in zip(((0, 0), (1, 0), (1, 1), (0, 1)), ((0.17, 0.93), (-0.17, 0.93), (-0.17, 1.39), (0.17, 1.39))):
+            glTexCoord2f(u, w)
+            glVertex3f(x, y, 0.205)
+        glEnd()
+        glDisable(GL_TEXTURE_2D)
+
     def lacher(self, nom):
         """Il renverse un chariot ou une caisse derrière lui (sauf si le joueur est juste dessus)."""
         v, joueur = self.voleur, self.app.player
@@ -402,27 +448,11 @@ class MissionPoursuite(Mission):
         self.obstacles.append((modele(nom), p.copy(), lacet))
         self.salle.bloquer_rect(p[0] - 0.8, p[2] - 0.55, p[0] + 0.8, p[2] + 0.55, 1.0)
         self.lent = 0.8
-        self.app.audio.spatial("grondement", p, joueur.pos, joueur.yaw)
+        self.app.audio.spatial("fracas", p, joueur.pos, joueur.yaw, 30.0)
 
     def draw3d(self, cam):
-        v = self.voleur
-        v.draw()
-        if self.attrape is None:  # le tableau qu'il emporte, serré contre lui
-            glPushMatrix()
-            glTranslatef(*v.pos)
-            glRotatef(90 - v.yaw, 0, 1, 0)
-            rendu.draw_box(-0.2, 0.78, 0.2, 0.2, 1.32, 0.24, (0.8, 0.62, 0.25))
-            glEnable(GL_TEXTURE_2D)
-            glBindTexture(GL_TEXTURE_2D, rendu.texture("tableau:belle_ferronniere"))
-            glColor3f(1, 1, 1)
-            glNormal3f(0, 0, 1)
-            glBegin(GL_QUADS)
-            for (u, w), (x, y) in zip(((0, 0), (1, 0), (1, 1), (0, 1)), ((0.17, 0.81), (-0.17, 0.81), (-0.17, 1.29), (0.17, 1.29))):
-                glTexCoord2f(u, w)
-                glVertex3f(x, y, 0.245)
-            glEnd()
-            glDisable(GL_TEXTURE_2D)
-            glPopMatrix()
+        self.voleur.draw()
+        self.gardien.draw()
         for m, p, lacet in self.obstacles:
             dessiner_modele(m, p, lacet)
 
@@ -457,6 +487,7 @@ class MissionLasers(Mission):
     objectif = "Couper l'alarme sous la tribune"
     duree = 300
     eclairage = 0.25
+    musique = "lasers"
     astuces = ("Espace pour sauter par-dessus un rayon bas, C pour t'accroupir sous un rayon haut.",
                "Trois alarmes et c'est fini. Les dalles vertes sont des points de contrôle.")
     victoire = ("Le panneau s'éteint, les rayons tombent. Au fond de la salle, l'escalier de service descend vers la crypte "
@@ -505,6 +536,9 @@ class MissionLasers(Mission):
     def update(self, dt):
         joueur = self.app.player
         self.flash = max(0.0, self.flash - dt * 1.5)
+        oeil = joueur.eye()  # plus on est près d'un rayon, plus on entend son bourdonnement
+        proche = min(seg_seg_distance(oeil, oeil, a, b) for l, a, b, actif in self.segments() if actif)
+        self.app.audio.boucle("lasers", max(0.0, 1 - proche / 4.0) ** 2)
         for k in range(self.point + 1, len(self.POINTS)):  # points de contrôle
             if joueur.pos[2] < self.POINTS[k][1] + 0.3 and abs(joueur.pos[0]) < 3.5:
                 self.point = k
@@ -530,7 +564,8 @@ class MissionLasers(Mission):
                 return
 
     def couper(self):
-        self.app.audio.play("arrestation")
+        self.app.audio.boucle("lasers", 0)
+        self.app.audio.play("coupure")
         self.gagner()
 
     def interactions(self):
@@ -585,6 +620,7 @@ class MissionSphinx(Mission):
     duree = 300
     eclairage = 1.0
     lampe = False
+    musique, ambiance = "sphinx", "crypte"
     astuces = ("Regarde bien l'ordre des symboles qui s'allument, et écoute leurs notes.",
                "Une erreur coûte 15 secondes et le Sphinx recommence.")
     victoire = ("Le tiroir de pierre renfermait la couronne de l'impératrice Eugénie... et un message du Cercle : "
@@ -601,6 +637,7 @@ class MissionSphinx(Mission):
     def ecouter(self):
         if self.premiere:
             self.premiere = False
+            self.app.audio.play("sphinx_voix")
             self.app.ouvrir_examen("Le Sphinx parle", "« Je montre, tu répètes. Réussis trois fois mes épreuves, "
                                    "et mon trésor sera tien. »", "Regarde les symboles s'allumer, dans l'ordre.", None)
         self.commencer_manche(0.8)
@@ -633,7 +670,7 @@ class MissionSphinx(Mission):
 
     def prendre(self):
         self.etat = "fin"
-        self.app.audio.play("win")
+        self.app.audio.play("joyau")
         self.app.burst(self.position_couronne(), (255, 210, 120))
         self.gagner()
 
@@ -723,6 +760,7 @@ class MissionVictoire(Mission):
     objectif = "Arrêter le chef du Cercle"
     eclairage = 0.65
     lampe = False
+    musique, ambiance = "infiltration", "pluie"
     astuces = ("Reste hors des faisceaux des guetteurs. Accroupi (C), tu es plus discret, et caché derrière une caisse.",
                "Ta lampe allumée te fait repérer de plus loin. Si tu cours, ils t'entendent.")
     victoire = ("Le chef du Cercle est arrêté au pied de la Victoire de Samothrace. Les joyaux, la couronne et La Belle "
@@ -750,6 +788,7 @@ class MissionVictoire(Mission):
         self.chef = PNJ("chef", 4.2, -12.0, yaw=0.0, salle=s)
         self.chef_chrono, self.chef_retourne = 9.0, 0.0
         self.max_alerte, self.arrete = 0.0, None
+        self.coeur, self.radio = 0.0, random.uniform(6, 12)
 
     def update(self, dt):
         joueur, s = self.app.player, self.salle
@@ -795,13 +834,23 @@ class MissionVictoire(Mission):
             if distance < 10 and foulee != getattr(g, "foulee", foulee):
                 self.app.audio.spatial("pas", g.pos, joueur.pos, joueur.yaw)
             g.foulee = foulee
+        alerte = max(g.alerte for g in self.guetteurs + [self.chef])
+        self.coeur -= dt
+        if alerte > 0.15 and self.coeur <= 0:  # le cœur bat plus vite quand on se sent repéré
+            self.app.audio.play("coeur", 0.4 + 0.6 * alerte)
+            self.coeur = 1.0 - 0.55 * alerte
+        self.radio -= dt
+        if self.radio <= 0:  # les talkies-walkies des guetteurs grésillent de temps en temps
+            g = min(self.guetteurs, key=lambda g: np.sum((g.pos - joueur.pos) ** 2))
+            self.app.audio.spatial("radio", g.pos, joueur.pos, joueur.yaw, 16.0)
+            self.radio = random.uniform(12, 22)
 
     def arreter(self):
         self.chef.pose = "mains_en_l_air"
         self.arrete = 1.8
         for g in self.guetteurs:
             g.route, g.pose = [], "mains_en_l_air"
-        self.app.audio.play("arrestation")
+        self.app.audio.play("menottes")
         self.app.notice("Arrêté !", "Le chef du Cercle lève les mains.", GREEN)
 
     def interactions(self):

@@ -25,7 +25,13 @@ Chaque nuit réussie débloque la suivante sur la carte du musée, et rapporte d
 
 ## Visite libre
 
-Les six salles se visitent aussi librement, lumières allumées. On peut voler jusqu'aux plafonds et s'approcher des œuvres : quand on regarde un tableau ou une statue, son cartel s'affiche (titre, artiste, date).
+Les six salles se visitent aussi librement, lumières allumées et pleines de monde : des visiteurs vont d'une œuvre à l'autre (certains prennent des photos, d'autres regardent leur téléphone), une foule se presse devant la Joconde, une guide montre les tableaux à son groupe, et un gardien surveille depuis sa chaise. On peut voler jusqu'aux plafonds et s'approcher des œuvres : quand on regarde un tableau ou une statue, son cartel s'affiche (titre, artiste, date).
+
+## Personnages et sons
+
+Tous les personnages sont modélisés et animés en code : gardiens, policiers, voleurs, guetteurs cagoulés, chef du Cercle, conservatrice, guide, et des visiteurs tirés au hasard (visage, peau, coiffure, barbe, lunettes, casquette, béret, sac à dos, audioguide, jupe, manches courtes...). Leur squelette a des genoux, des coudes et une tête qui tourne : ils marchent, courent, lèvent les mains, croisent les bras, s'assoient, pointent un tableau et vous suivent du regard quand vous passez.
+
+Aucun fichier audio : tout est synthétisé au lancement, en arrière-plan. Il y a une musique par nuit (piano pour le menu, pizzicati pour l'enquête, batterie pour la poursuite, arpèges électroniques pour les lasers, harpe orientale pour le Sphinx, pouls sourd pour l'infiltration), des ambiances (pluie sur la verrière, vent et braseros de la crypte, murmure de la foule), des pas qui changent selon le sol (parquet, marbre, pierre), et des bruitages : sonar du détecteur, tintement des joyaux, sifflet, sonnerie d'alarme, menottes, talkie-walkie des guetteurs, battements de cœur quand on est presque repéré, voix du Sphinx...
 
 ## Lancer le jeu
 
@@ -79,16 +85,16 @@ VirtuLouvre/
 │   ├── missions.py      # Les six nuits de la campagne
 │   ├── salles.py        # Les six salles : géométrie, collisions, lumières, œuvres
 │   ├── modeles.py       # Modèles 3D construits en code : personnages, statues, joyaux, mobilier
-│   ├── acteurs.py       # Le joueur et les personnages (patrouilles, vision, animation)
+│   ├── acteurs.py       # Le joueur, les personnages (patrouilles, vision, squelette, poses) et la foule
 │   ├── rendu.py         # OpenGL : textures procédurales, maillages, éclairage, effets
 │   ├── interface.py     # Interface 2D (boutons, textes, curseurs)
-│   ├── sons.py          # Sons et musique générés avec NumPy
+│   ├── sons.py          # Sons, musiques et ambiances synthétisés avec NumPy
 │   └── base.py          # Constantes, réglages, petits outils de calcul
 ├── src/
 │   ├── models/          # Scan 3D de la galerie d'Apollon (.obj)
 │   ├── tableaux/        # Reproductions d'œuvres du domaine public (voir CREDITS.txt)
 │   ├── textures/        # Texture du scan, parquet, ciel
-│   ├── media/           # Bruits de pas
+│   ├── media/           # Vidéo des premiers prototypes
 │   └── icons/           # Icônes de l'interface
 ├── config/              # Réglages et progression du joueur
 ├── docs/                # Aperçus pour ce README
@@ -101,13 +107,13 @@ VirtuLouvre/
 ## Documentation technique
 
 - **Salles (`salles.py`)** : un constructeur assemble sols, murs à portes, voûtes en berceau, colonnes cannelées, escaliers et tableaux encadrés. Chaque surface est découpée en petits carreaux, parce que l'éclairage OpenGL « classique » est calculé aux sommets et qu'une grande face resterait uniforme. En même temps, il remplit trois cartes vues de dessus : les cases infranchissables, la hauteur du sol (pour les escaliers) et la hauteur des obstacles qui cachent la vue (pour savoir si un guetteur voit le joueur derrière une caisse). La galerie d'Apollon vient d'un scan 3D ; sa carte des collisions est calculée à partir de la matière du scan à hauteur du corps.
-- **Modèles (`modeles.py`)** : tout est construit à partir de formes simples (boîtes, surfaces de révolution, tores, tubes le long d'une courbe, pierres taillées, prismes). Les personnages ont cinq parties (corps, jambes, bras) animées pour marcher, courir ou lever les mains.
+- **Modèles (`modeles.py`)** : tout est construit à partir de formes simples (boîtes, surfaces de révolution, tores, tubes le long d'une courbe, pierres taillées, prismes). Les personnages ont dix parties (buste, tête, cuisses, jambes, bras, avant-bras) et une tenue tirée d'une graine : un même visiteur a toujours la même allure. Les couleurs de peau et de vêtements sont des matériaux « rgb:r,g,b » créés à la volée.
 - **Textures (`rendu.py`)** : marbre, pierre de taille, dallages, caissons, hiéroglyphes... sont calculés au lancement avec NumPy. Ils utilisent un bruit périodique (une somme de sinusoïdes de fréquences entières), pour que la texture se répète sans raccord visible.
-- **Personnages (`acteurs.py`)** : patrouilles avec pauses, champ de vision (portée, angle, obstacles), réaction aux bruits de course.
+- **Personnages (`acteurs.py`)** : un squelette simple (bassin, hanches, genoux, épaules, coudes, cou) dont les angles viennent de la marche, de la course et des poses. La même chaîne de transformations sert à dessiner (OpenGL) et à calculer où pointe la lampe d'un guetteur (NumPy). Patrouilles avec pauses, champ de vision (portée, angle, obstacles), réaction aux bruits de course. Les visiteurs choisissent une œuvre proche qu'ils peuvent rejoindre en ligne droite, la regardent un moment, puis repartent ; on ne peut pas les traverser.
 - **Missions (`missions.py`)** : chaque mission prépare la salle, fait avancer sa logique à chaque image, propose des interactions (touche E) et dessine son morceau d'interface. Les lasers utilisent la distance entre deux segments (le rayon et le corps du joueur).
-- **Sons (`sons.py`)** : bips, sirènes, notes du Sphinx, musique d'ambiance... sont synthétisés avec NumPy. Les boucles musicales se raccordent sans clic.
+- **Sons (`sons.py`)** : une petite boîte à outils de synthèse. Synthèse additive (cloches, verre, marimba, piano avec ses partiels légèrement désaccordés, cuivres dont les aigus montent avec le souffle), cordes pincées de Karplus-Strong (harpe, pizzicati), voix par formants (murmure de la foule, talkie-walkie, Sphinx), bruit filtré dans le domaine de Fourier (pas, pluie, pierre qui racle), réverbération par convolution avec une réponse de salle stéréo. Les musiques et ambiances bouclent sans clic : les notes qui dépassent de la fin reviennent au début, et l'écho est une convolution circulaire. Tout est calculé dans un fil d'exécution séparé pendant qu'on regarde le menu.
 
-L'auto-test (`python main.py --test`, sans fenêtre) vérifie les réglages, les modèles et les salles. Il vérifie aussi que chaque joyau est accessible et que l'escalier se monte, et qu'un robot qui gère son souffle arrive à rattraper le voleur de la nuit 3.
+L'auto-test (`python main.py --test`, sans fenêtre) vérifie les réglages, les modèles et les salles. Il vérifie aussi que chaque joyau est accessible, que l'escalier se monte, qu'un robot qui gère son souffle arrive à rattraper le voleur de la nuit 3, que les visiteurs ne traversent pas les murs, que la lampe des guetteurs éclaire devant eux, et que chaque son se fabrique sans erreur.
 
 ## Crédits
 

@@ -59,6 +59,10 @@ class Salle:
         self.fond = (0.0, 0.0, 0.0)
         self.ciel = False
         self.meshes = None
+        # Figurants de la visite libre : nombre de visiteurs, points de vue en plus des tableaux (x, z, point regardé),
+        # chaise du gardien (x, z, lacet), guide et son groupe (x, z, lacet, point regardé), attroupement (cible, positions)
+        self.visiteurs, self.points_vue, self.chaise, self.groupe, self.attroupement = 8, [], None, None, None
+        self.sol_son = "pierre"  # bruit des pas : "parquet", "marbre" ou "pierre"
 
     # --- Cartes de collision ---
 
@@ -535,6 +539,13 @@ def construire_apollon():
     s.ambiante_visite = (0.9, 0.9, 0.9)  # le scan a déjà son éclairage
     s.ciel = True
     s.lumieres = [(np.array((0.2, 3.5, z)), (1.0, 0.9, 0.75), 10.0) for z in (15, 5, -5, -15)]
+    s.sol_son, s.visiteurs, s.chaise = "parquet", 7, (-2.1, 18.45, -45.0)
+    for x, z, _ in VITRINES_APOLLON:
+        for dx in (-1.25, 1.25):
+            for dz in (-0.5, 0.5):
+                s.points_vue.append((x + dx, z + dz, (x, 0.9, z)))
+        for dx in (-2.6, 2.9):  # les murs peints et les dorures
+            s.points_vue.append((x + dx * 0.8, z + 4.5, (x + dx * 1.4, 2.6, z + 4.5)))
     return s
 
 
@@ -584,6 +595,12 @@ def construire_etats():
     for position in ((-5, 5.5, 11), (5, 5.5, 11), (-5, 5.5, 0), (5, 5.5, 0), (0, 5.0, -8.5), (0, 6.0, 15)):
         s.lumiere(position, portee=10.0)
     s.depart = (0.0, 0.0, 11.0, -90.0)
+    s.sol_son, s.visiteurs, s.chaise = "parquet", 6, (7.3, 12.5, 180.0)
+    s.points_vue = [(x, z, (x * 1.2, 4.1, 18)) for x in (-4.5, -1.5, 1.5, 4.5) for z in (11.5, 13.5)]  # les Noces de Cana
+    s.points_vue += [(x * 0.55, z, (x, 2.4, z)) for x in (-8, 8) for z in (-4, 6)]
+    s.attroupement = ((0.0, 1.75, -12.7), [(r * math.cos(math.radians(a)), -12.7 + r * math.sin(math.radians(a)))
+                                           for r, angles in ((3.2, (35, 62, 90, 118, 145)), (4.3, (52, 78, 104, 128)))
+                                           for a in angles])
     s.ambiante_nuit = (0.09, 0.1, 0.16)
     s.ambiante_visite = (0.42, 0.42, 0.46)
     s.cartels.append((np.array((0, 1.75, -12.3)), "La Joconde", "Léonard de Vinci, vers 1503-1519. Le portrait le plus "
@@ -631,6 +648,8 @@ def construire_grande_galerie():
     for z in np.arange(-60, 61, 11.0):
         s.lumiere((3.0 if int(z) % 2 else -3.0, 5.5, z), portee=12.0)
     s.depart = (0.0, 0.0, 58.0, -90.0)
+    s.sol_son, s.visiteurs, s.chaise = "parquet", 12, (4.45, 26.0, 180.0)
+    s.groupe = (-3.3, 50.2, 180.0, (-5.0, 2.6, 52.5))
     s.ambiante_nuit = (0.12, 0.11, 0.13)
     s.ambiante_visite = (0.45, 0.43, 0.4)
     s.brume = 0.012
@@ -666,6 +685,11 @@ def construire_cariatides():
     for position in ((0, 6, 11), (0, 6, 1), (0, 6, -9), (-4, 4, -14), (4, 4, -14)):
         s.lumiere(position, portee=10.0)
     s.depart = (0.0, 0.0, 13.5, -90.0)
+    s.sol_son, s.visiteurs, s.chaise = "marbre", 6, (6.3, 13.2, 180.0)
+    for i, z in enumerate((-6, 0, 6, 12)):  # les statues antiques
+        for cote in (-1, 1):
+            s.points_vue.append((cote * 2.6, z, (cote * 4.3, 1.6, z)))
+    s.points_vue += [(x, -9.8, (x, 1.8, -13.2)) for x in (-2.0, 0.0, 2.0)]  # les Cariatides
     s.ambiante_nuit = (0.1, 0.06, 0.07)
     s.ambiante_visite = (0.45, 0.43, 0.42)
     s.cartels.append((np.array((0, 1.8, -13.2)), "Les Cariatides", "Jean Goujon, 1550. Quatre femmes de pierre portent "
@@ -699,6 +723,11 @@ def construire_sphinx():
         s.lumiere((x, 1.4, z), (1.0, 0.55, 0.2), 7.0)
     s.lumiere((0, 3.5, -2.5), (0.9, 0.8, 0.7), 8.0)
     s.depart = (0.0, 0.0, 8.5, -90.0)
+    s.visiteurs = 5
+    s.points_vue = [(0.0, 1.9, (0, 1.3, -0.6)), (-2.1, -2.6, (0, 0.8, -2.6)), (2.1, -2.6, (0, 0.8, -2.6)),
+                    (-1.7, 0.9, (0, 1.2, -1.0)), (1.7, 0.9, (0, 1.2, -1.0))]
+    s.points_vue += [(x + (1.3 if x < 0 else -1.3), z, (x, 1.0, z)) for x, z, _ in STELES]
+    s.points_vue += [(x * 0.9, z, (x * 1.3, 1.6, z)) for x in (-6.0, 6.0) for z in (-6.0, 1.0, 7.0)]  # hiéroglyphes
     s.ambiante_nuit = (0.07, 0.05, 0.04)
     s.ambiante_visite = (0.42, 0.38, 0.34)
     s.feux = [(x, 1.1, z) for x, z in ((-6.5, -8.5), (6.5, -8.5), (-6.5, 8.3), (6.5, 8.3))]
@@ -758,6 +787,11 @@ def construire_daru():
     s.lumiere((-5, PALIER + 3, -14), (0.9, 0.8, 0.65), 10.0)
     s.lumiere((5, PALIER + 3, -14), (0.9, 0.8, 0.65), 10.0)
     s.depart = (0.0, 0.0, 14.5, -90.0)
+    s.visiteurs = 9
+    s.points_vue = [(x, -8.6, (0, PALIER + 2.5, -12.5)) for x in (-2.4, -0.8, 0.8, 2.4)]
+    s.points_vue += [(x, 6.0, (0, PALIER + 2.5, -12.5)) for x in (-2.0, 2.0)]  # la Victoire vue d'en bas
+    s.points_vue += [(4.2, -12.0, (5.4, PALIER + 1.2, -12.0))]  # la main de la Victoire
+    s.points_vue += [(x * 0.62, z, (x, 1.3, z)) for x in (-6.3, 6.3) for z in (6.5, 13.5)]  # les bustes
     s.ambiante_nuit = (0.13, 0.14, 0.2)  # clair de lune : assez pour s'orienter, assez sombre pour se cacher
     s.ambiante_visite = (0.42, 0.42, 0.45)
     s.cartels.append((np.array((0, PALIER + 2.5, -12.0)), "La Victoire de Samothrace", "Grèce, vers 190 av. J.-C. "

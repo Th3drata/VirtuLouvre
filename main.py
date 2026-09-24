@@ -23,8 +23,8 @@ def self_test():
     import numpy as np
     import pygame
 
-    from jeu import base, missions, modeles, salles
-    from jeu.acteurs import PNJ, Player
+    from jeu import base, missions, modeles, salles, sons
+    from jeu.acteurs import PNJ, Foule, Player
 
     pygame.init()
     p = np.array
@@ -46,21 +46,32 @@ def self_test():
     assert abs(base.seg_seg_distance(p((0, 0, 0.)), p((0, 2, 0.)), p((-1, 1, 1.)), p((1, 1, 1.))) - 1.0) < 1e-9
 
     # Modèles : géométrie valide
-    noms = [f"humain:{t}" for t in modeles.TENUES] + [f"joyau:{k}" for k in range(8)] + list(modeles.FABRIQUES) + \
-           [f"stele:{s}" for s in modeles.SYMBOLES] + ["statue:0", "buste:0"]
+    noms = [f"humain:{r}" for r in modeles.ROLES] + [f"visiteur:{k}" for k in range(12)] + [f"joyau:{k}" for k in range(8)] + \
+        list(modeles.FABRIQUES) + [f"stele:{s}" for s in modeles.SYMBOLES] + ["statue:0", "buste:0"]
     triangles = 0
     for nom in noms:
         for forme in modeles.modele(nom).parties.values():
             for mat, (tris, norms) in forme.tableaux().items():
-                assert mat in modeles.MATERIAUX and np.isfinite(tris).all(), nom
+                assert modeles.materiau(mat) and np.isfinite(tris).all(), nom
                 assert (abs(np.linalg.norm(norms, axis=-1) - 1) < 1e-3).all(), nom
                 triangles += len(tris)
 
-    # Salles : on part d'un endroit libre et chaque salle est éclairée
+    # Salles : on part d'un endroit libre et chaque salle est éclairée ; les visiteurs ne traversent pas les murs
     toutes = {nom: salles.construire(nom) for nom in salles.SALLES}
     for nom, s in toutes.items():
         x, y, z, _ = s.depart
         assert s.libre(x, z, y) and s.lumieres, nom
+        foule = Foule(s).peupler(s.visiteurs, 3)
+        visiteurs = [g for g in foule.gens if g.comportement == "visite"]
+        assert len(visiteurs) == s.visiteurs, nom
+        for _ in range(900):
+            foule.update(1 / 30)
+        assert all(s.libre(g.pos[0], g.pos[2], g.pos[1]) for g in visiteurs), nom
+
+    # Un guetteur éclaire devant lui et un peu vers le sol (la lampe suit son avant-bras)
+    g = PNJ("guetteur", 0.0, 0.0, yaw=30.0)
+    bout, direction = g.lampe()
+    assert (bout - g.pos) @ g.devant() > 0.25 and -0.35 < direction[1] < -0.1 and direction @ g.devant() > 0.9
 
     # Nuit 1 : chaque joyau peut être ramassé depuis une case accessible
     apollon = toutes["apollon"]
@@ -90,7 +101,8 @@ def self_test():
 
         def __init__(self, salle, joueur):
             self.salle, self.player, self.resultat = salle, joueur, None
-            self.audio = type("Silence", (), {"play": lambda *a: None, "spatial": lambda *a: None})()
+            self.audio = type("Silence", (), {"__getattr__": lambda soi, nom: lambda *a, **k: None})()
+            self.foule = Foule(salle)
 
         def notice(self, *a):
             pass
@@ -149,8 +161,14 @@ def self_test():
     assert guetteur.voit(p((1.2, salles.PALIER + base.BODY - 0.1, -9.0)), daru, 12)
     for s in toutes.values():
         s.reset()
+
+    # Sons : chaque bruitage, musique et ambiance se fabrique sans erreur
+    for nom, (fabrique, _) in sons.EFFETS.items():
+        ondes = fabrique()
+        for onde in ondes if isinstance(ondes, list) else [ondes]:
+            assert len(onde) > 100 and np.isfinite(onde).all() and np.abs(onde).max() > 1e-3, nom
     print(f"Auto-test OK : {len(noms)} modèles ({triangles} triangles), {len(toutes)} salles, "
-          f"voleur rattrapé en {temps_poursuite:.1f} s")
+          f"voleur rattrapé en {temps_poursuite:.1f} s, {len(sons.EFFETS)} sons")
 
 
 if __name__ == "__main__":

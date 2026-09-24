@@ -11,7 +11,7 @@ import pygame
 from OpenGL.GL import *
 
 from . import rendu
-from .acteurs import Player
+from .acteurs import Foule, Player
 from .base import (ACTIONS, ARROWS, BLUE, DIM, DOSSIER, GOLD, GREEN, IVORY, KEY_LABELS, RED, RESOLUTIONS, VERSION, chemin,
                    fmt_time, key_code, load_settings, save_settings)
 from .interface import UI
@@ -55,6 +55,7 @@ class App:
         self.audio = Audio(self.settings["volume"], self.settings["musique"])
         self.salles = {}
         self.salle = self.charger_salle("apollon", 0.1)
+        self.foule_menu = self.foule = Foule(self.salle).peupler(self.salle.visiteurs, 0)  # des visiteurs derrière le menu
         if self.settings["fullscreen"]:
             pygame.display.toggle_fullscreen()
 
@@ -79,6 +80,7 @@ class App:
         self.notice_data = self.toast = None
         self.examen = self.deduction_retour = self.fin = None
         self.keys = pygame.key.get_pressed()
+        self.pas_joueur, self.au_sol = 0, True
         self.audio.music("menu")
 
     # --- Fenêtre ---
@@ -218,13 +220,16 @@ class App:
             pygame.mouse.get_rel()
             self.skip_motion = True  # le premier mouvement après capture peut être un grand saut
         else:
-            self.audio.walking(False)
+            self.audio.boucle("lasers", 0)
 
     def to_menu(self):
         self.mode, self.mission = None, None
         self.salle = self.salles["apollon"]
+        self.salle.reset()
+        self.foule = self.foule_menu
         self.particles = []
         self.audio.music("menu")
+        self.audio.ambiance(None)
         self.set_state("menu")
 
     def lancer_mission(self, index, point=0, essais=0):
@@ -235,10 +240,13 @@ class App:
         self.mission = classe(self, point, essais)
         x, y, z, lacet = self.mission.depart()
         self.player = Player(x, y, z, lacet)
+        self.foule = Foule(self.salle)  # la mission y ajoute ses figurants
         self.mission.demarrer()
         self.mode, self.torche = "mission", classe.lampe
         self.particles, self.notice_data, self.cible, self.toast = [], None, None, None
-        self.audio.music("mission")
+        self.audio.music(classe.musique)
+        self.audio.ambiance(classe.ambiance)
+        self.audio.sol = self.salle.sol_son
         self.set_state("play")
 
     def lancer_visite(self, nom):
@@ -247,9 +255,12 @@ class App:
         self.mission = None
         x, y, z, lacet = self.salle.depart
         self.player = Player(x, y, z, lacet)
+        self.foule = Foule(self.salle).peupler(self.salle.visiteurs, random.randrange(1000))
         self.mode, self.torche, self.visit_start = "visite", False, self.t
         self.particles, self.notice_data, self.toast = [], None, None
         self.audio.music("menu")
+        self.audio.ambiance("foule")
+        self.audio.sol = self.salle.sol_son
         self.set_state("play")
 
     def open_settings(self, retour):
@@ -288,10 +299,10 @@ class App:
             self.settings["progress"][m.id] = {"stars": max(self.fin["etoiles"], ancien.get("stars", 0)),
                                                "best": round(min(m.temps, meilleur or m.temps), 2)}
             save_settings(self.settings)
-            self.audio.play("win")
+            self.audio.play("victoire")
             self.carte_choix = min(self.mission_index + 1, len(CAMPAGNE) - 1)
         else:
-            self.audio.play("lose")
+            self.audio.play("echec")
         self.set_state("end")
 
     def notice(self, titre, sous_titre="", couleur=GOLD):
@@ -317,8 +328,11 @@ class App:
             self.handle_event(e)
         self.keys = pygame.key.get_pressed()
         self.t += dt
+        self.audio.update()
         if self.state == "play":
             self.update_play(dt)
+        elif self.mode is None:
+            self.foule.update(dt)
         self.update_particles(dt)
         self.render()
         if self.ui.clicked:
@@ -391,10 +405,12 @@ class App:
             if e.key in self.codes["interact"] and self.cible:
                 self.cible.action()
             elif e.key in self.codes["jump"]:
+                if joueur.on_ground and not joueur.crouch and not joueur.flying:
+                    self.audio.play("saut")
                 joueur.want_jump = True
             elif e.key in self.codes["torch"] and self.mode == "mission":
                 self.torche = not self.torche
-                self.audio.play("click")
+                self.audio.play("lampe")
             elif e.key in self.codes["fly"] and self.mode == "visite":
                 if joueur.flying and not self.salle.libre(joueur.pos[0], joueur.pos[2], self.salle.sol_sous(*joueur.pos[[0, 2]])):
                     self.toast = ("Impossible d'atterrir ici", self.t)  # sinon on se poserait dans un mur
@@ -408,7 +424,8 @@ class App:
         joueur = self.player
         joueur.update(dt, self.held, self.salle, can_fly=self.mode == "visite",
                       endurance=bool(self.mission and self.mission.endurance))
-        self.audio.walking(joueur.walking)
+        self.bruits_de_pas(joueur)
+        self.foule.update(dt, joueur, self.audio)
         m = self.mission
         if m:
             reste_avant = m.duree - m.temps if m.duree else None
@@ -424,6 +441,16 @@ class App:
             if self.state != "play":
                 return
         self.cible = self.chercher_cible()
+
+    def bruits_de_pas(self, joueur):
+        """Un bruit de pas à chaque foulée (au rythme du balancement de la caméra), selon le sol de la salle."""
+        pas = int(joueur.bob / math.pi)
+        if joueur.walking and pas != self.pas_joueur:
+            self.audio.pas(self.salle.sol_son, 0.35 if joueur.crouch else 1.2 if joueur.sprinting else 0.75)
+        self.pas_joueur = pas
+        if joueur.on_ground and not self.au_sol and not joueur.flying:
+            self.audio.play("atterrir_" + self.salle.sol_son)
+        self.au_sol = joueur.on_ground or joueur.flying
 
     def chercher_cible(self):
         """L'interaction que le joueur regarde (la plus centrée, à portée et à découvert)."""
@@ -521,6 +548,7 @@ class App:
                         ((1.5, 1.42, 1.25), 10.0) if self.torche and nuit else None,
                         points if intensite > 0 else [], m.spots() if m else [])
         salle.draw()
+        self.foule.draw()
         if m:
             m.draw3d(cam)
         glDisable(GL_LIGHTING)
@@ -739,7 +767,7 @@ class App:
                     self.audio.set_volume(s["volume"], s["musique"])
                 ui.text(f"{round(valeur * 100)} %", 24, (xd, y), IVORY, "midright")
             if ui.button("Tester le son", (ui.W / 2, 324), 24, couleur=BLUE):
-                self.audio.play("pickup")
+                self.audio.play("joyau")
         else:
             y = 184
             for action, libelle, _ in ACTIONS:
