@@ -1,15 +1,31 @@
 # VirtuLouvre
 
-VirtuLouvre est un jeu vidéo 3D qui se déroule dans la **galerie d'Apollon** du musée du Louvre, reconstituée à partir d'un scan 3D. Il est écrit en Python avec pygame-ce, OpenGL et NumPy, et fonctionne sous **Windows, macOS et Linux**.
+**Six nuits pour sauver les trésors du Louvre.** VirtuLouvre est un jeu vidéo 3D écrit en Python (pygame-ce, OpenGL, NumPy) qui fonctionne sous **Windows, macOS et Linux**. On y joue une campagne de six missions dans six salles du musée : la galerie d'Apollon, reconstituée à partir d'un scan 3D, et cinq salles modélisées entièrement en code. Les tableaux accrochés aux murs sont les vrais, des reproductions du domaine public.
 
 ![Menu principal](docs/apercu_menu.jpg)
 
-## Deux façons de jouer
+## La campagne : les nuits du Louvre
 
-- **Mission : les joyaux de la Couronne.** Le 19 octobre 2025, huit joyaux de la Couronne ont été volés dans la galerie d'Apollon. Dans le jeu, les voleurs ont semé leur butin dans la galerie plongée dans le noir. Tu as 3 minutes pour retrouver les 8 joyaux, avec une lampe torche qui fait scintiller les pierres et un détecteur qui bipe de plus en plus vite quand tu t'approches. Les cachettes changent à chaque partie et ton meilleur temps est enregistré.
-- **Visite libre.** La galerie est éclairée : promène-toi, ou vole jusqu'au plafond peint par Delacroix.
+Le 19 octobre 2025, huit joyaux de la Couronne ont été volés dans la galerie d'Apollon. Le jeu part de cet événement pour inventer une histoire : une bande de voleurs, le Cercle, frappe le musée nuit après nuit. Chaque nuit se joue dans une salle différente, avec sa propre mécanique.
 
-![Mission](docs/apercu_mission.jpg)
+| Nuit | Salle | Mission | Ce qu'on fait |
+| --- | --- | --- | --- |
+| 1 | Galerie d'Apollon | Les joyaux de la Couronne | Fouiller la galerie dans le noir, à la lampe torche et au détecteur, pour retrouver les 8 joyaux |
+| 2 | Salle des États | Les indices de la Joconde | Examiner 6 indices autour de la Joconde, puis déduire le prochain coup du Cercle |
+| 3 | Grande Galerie | La poursuite | Rattraper un faux restaurateur qui s'enfuit avec *La Belle Ferronnière*, en gérant son souffle |
+| 4 | Salle des Cariatides | Le labyrinthe laser | Traverser des rayons fixes, balayants, tournants et clignotants (sauter, s'accroupir) |
+| 5 | Crypte du Sphinx | L'énigme du Sphinx | Répéter les séquences de hiéroglyphes du Sphinx pour ouvrir sa cachette |
+| 6 | Escalier Daru | La Victoire de Samothrace | S'infiltrer entre les guetteurs et leurs lampes, puis arrêter le chef du Cercle |
+
+![Les six nuits](docs/apercu_nuits.jpg)
+
+Chaque nuit réussie débloque la suivante sur la carte du musée, et rapporte de 1 à 3 étoiles selon le temps mis, les erreurs ou la discrétion. La progression et les records sont enregistrés.
+
+![Carte de la campagne](docs/apercu_carte.jpg)
+
+## Visite libre
+
+Les six salles se visitent aussi librement, lumières allumées. On peut voler jusqu'aux plafonds et s'approcher des œuvres : quand on regarde un tableau ou une statue, son cartel s'affiche (titre, artiste, date).
 
 ## Lancer le jeu
 
@@ -24,19 +40,16 @@ Il faut **Python 3.9 ou plus récent** ([python.org](https://www.python.org/down
 ### Installation manuelle
 
 ```bash
-python3 -m venv .venv                         # Windows : py -m venv .venv
+python3 -m venv .venv                                 # Windows : py -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt   # Windows : .venv\Scripts\python ...
 .venv/bin/python main.py
 ```
 
-Pour vérifier l'installation sans ouvrir de fenêtre : `python main.py --test`.
-
 ### En cas de problème
 
-- **`pygame` et `pygame-ce` en même temps** : les deux s'installent dans le même dossier `pygame` et se marchent dessus. Fais `pip uninstall pygame pygame-ce`, puis `pip install -r requirements.txt`.
+- **`pygame` et `pygame-ce` en même temps** : les deux s'installent dans le même dossier `pygame` et se marchent dessus. Fais `pip uninstall pygame pygame-ce`, puis `pip install -r requirements.txt`. Le jeu te le signale au démarrage.
 - **Carte graphique** : il faut OpenGL 2.0 (toutes les cartes depuis 2004). Sans pilote graphique (machine virtuelle sans 3D, « Carte graphique de base Microsoft »), le jeu affiche un message au lieu de démarrer. Sous Linux, il faut les pilotes Mesa (`sudo apt install libgl1` sur Debian/Ubuntu).
 - **Pas de son** : le jeu continue en silence si l'ordinateur n'a pas de sortie audio.
-- **Vieille carte graphique** : les textures sont réduites automatiquement si elles dépassent la taille maximale supportée.
 
 ## Commandes
 
@@ -44,51 +57,68 @@ Pour vérifier l'installation sans ouvrir de fenêtre : `python main.py --test`.
 | --- | --- |
 | Z Q S D, W A S D ou flèches | Se déplacer (AZERTY et QWERTY marchent tous les deux) |
 | Souris | Regarder |
-| Maj | Courir |
-| Espace | Sauter / monter (en vol) |
+| Maj | Courir (attention au souffle pendant la poursuite) |
+| Espace | Sauter / monter en vol |
+| C | S'accroupir (plus discret, passe sous les lasers) / descendre en vol |
+| E | Examiner, agir (indices, symboles, alarme, arrestation...) |
+| F | Allumer / éteindre la lampe torche |
 | G | Voler / atterrir (visite libre) |
-| C | Descendre (en vol) |
 | Échap | Pause / retour |
 | F11 ou Alt+Entrée | Plein écran (sur Mac, F11 règle le volume : utilise Option+Entrée) |
 | F12 | Capture d'écran (dossier `captures/`) |
 
-Toutes les touches (sauf Échap, F11, F12 et les flèches) se changent dans **Paramètres > Touches**. Les réglages (touches, volume, champ de vision, sensibilité, résolution, record) sont enregistrés dans `config/settings.json`.
+Toutes les touches (sauf Échap, F11, F12 et les flèches) se changent dans **Paramètres > Touches**. Les réglages et la progression sont enregistrés dans `config/settings.json`.
 
 ## Structure du projet
 
 ```
 VirtuLouvre/
-├── main.py              # Le jeu (un seul fichier)
-├── requirements.txt     # Dépendances : pygame-ce, NumPy, PyOpenGL
-├── lancer.bat           # Lanceur Windows
-├── lancer.command       # Lanceur macOS / Linux
-├── config/              # Réglages du joueur
+├── main.py              # Point d'entrée (et auto-test : python main.py --test)
+├── jeu/                 # Le jeu
+│   ├── app.py           # Boucle principale, rendu, écrans (menu, carte, briefing, pause, fin...)
+│   ├── missions.py      # Les six nuits de la campagne
+│   ├── salles.py        # Les six salles : géométrie, collisions, lumières, œuvres
+│   ├── modeles.py       # Modèles 3D construits en code : personnages, statues, joyaux, mobilier
+│   ├── acteurs.py       # Le joueur et les personnages (patrouilles, vision, animation)
+│   ├── rendu.py         # OpenGL : textures procédurales, maillages, éclairage, effets
+│   ├── interface.py     # Interface 2D (boutons, textes, curseurs)
+│   ├── sons.py          # Sons et musique générés avec NumPy
+│   └── base.py          # Constantes, réglages, petits outils de calcul
 ├── src/
-│   ├── models/          # Scan 3D de la galerie (.obj)
+│   ├── models/          # Scan 3D de la galerie d'Apollon (.obj)
+│   ├── tableaux/        # Reproductions d'œuvres du domaine public (voir CREDITS.txt)
 │   ├── textures/        # Texture du scan, parquet, ciel
 │   ├── media/           # Bruits de pas
 │   └── icons/           # Icônes de l'interface
+├── config/              # Réglages et progression du joueur
 ├── docs/                # Aperçus pour ce README
+├── lancer.bat           # Lanceur Windows
+├── lancer.command       # Lanceur macOS / Linux
 ├── dependances/         # Anciens installeurs (Windows .exe, script shell)
 └── Tests/               # Prototypes de l'équipe
 ```
 
 ## Documentation technique
 
-Tout le jeu est dans `main.py` :
+- **Salles (`salles.py`)** : un constructeur assemble sols, murs à portes, voûtes en berceau, colonnes cannelées, escaliers et tableaux encadrés. Chaque surface est découpée en petits carreaux, parce que l'éclairage OpenGL « classique » est calculé aux sommets et qu'une grande face resterait uniforme. En même temps, il remplit trois cartes vues de dessus : les cases infranchissables, la hauteur du sol (pour les escaliers) et la hauteur des obstacles qui cachent la vue (pour savoir si un guetteur voit le joueur derrière une caisse). La galerie d'Apollon vient d'un scan 3D ; sa carte des collisions est calculée à partir de la matière du scan à hauteur du corps.
+- **Modèles (`modeles.py`)** : tout est construit à partir de formes simples (boîtes, surfaces de révolution, tores, tubes le long d'une courbe, pierres taillées, prismes). Les personnages ont cinq parties (corps, jambes, bras) animées pour marcher, courir ou lever les mains.
+- **Textures (`rendu.py`)** : marbre, pierre de taille, dallages, caissons, hiéroglyphes... sont calculés au lancement avec NumPy. Ils utilisent un bruit périodique (une somme de sinusoïdes de fréquences entières), pour que la texture se répète sans raccord visible.
+- **Personnages (`acteurs.py`)** : patrouilles avec pauses, champ de vision (portée, angle, obstacles), réaction aux bruits de course.
+- **Missions (`missions.py`)** : chaque mission prépare la salle, fait avancer sa logique à chaque image, propose des interactions (touche E) et dessine son morceau d'interface. Les lasers utilisent la distance entre deux segments (le rayon et le corps du joueur).
+- **Sons (`sons.py`)** : bips, sirènes, notes du Sphinx, musique d'ambiance... sont synthétisés avec NumPy. Les boucles musicales se raccordent sans clic.
 
-- **`load_model`** lit le fichier `.obj` (sommets, UV, normales) et le transforme en tableaux NumPy envoyés en une fois à la carte graphique (VBO).
-- **`Gallery`** regroupe le modèle 3D, les vitrines et la **carte des collisions** : une grille vue de dessus où une case est bloquée si le scan contient de la matière à hauteur du corps. Un parcours en largeur depuis le point de départ ferme les trous du scan par lesquels on pourrait sortir de la galerie. La même carte sert à choisir des cachettes accessibles pour les joyaux.
-- **`Player`** gère la caméra à la première personne : déplacements indépendants du nombre d'images par seconde, glissement le long des murs, saut, vol.
-- **`Audio`** fabrique les sons (bips, carillons, fanfare) avec NumPy. Il n'y a donc pas de fichiers audio à fournir en plus des bruits de pas.
-- **`UI`** dessine l'interface avec pygame sur une surface transparente, envoyée comme texture par-dessus la 3D. Les coordonnées sont virtuelles (720 pixels de haut) pour que l'interface s'adapte à toutes les résolutions.
-- **`App`** contient la boucle principale et les écrans (menu, paramètres, crédits, mission, pause, fin). En mission, la galerie est éclairée par une lampe torche (lumière « spot » OpenGL attachée à la caméra).
-
-Le jeu utilise l'OpenGL « classique » (pipeline fixe), disponible partout, y compris sur le contexte OpenGL 2.1 de macOS et les pilotes Mesa de Linux.
+L'auto-test (`python main.py --test`, sans fenêtre) vérifie les réglages, les modèles et les salles. Il vérifie aussi que chaque joyau est accessible et que l'escalier se monte, et qu'un robot qui gère son souffle arrive à rattraper le voleur de la nuit 3.
 
 ## Crédits
 
-Développé par **Albert Oscar**, **Moors Michel** et **Rinckenbach Yann** dans le cadre des Trophées NSI. Texture du ciel : Freepik.
+Développé par **Albert Oscar**, **Moors Michel** et **Rinckenbach Yann** dans le cadre des Trophées NSI.
+
+- Galerie d'Apollon : scan 3D de la galerie.
+- Salles, personnages, statues et joyaux : modélisés en code. Ce sont des évocations libres des vraies salles, et les joyaux des interprétations des originaux.
+- Tableaux : reproductions du domaine public, via Wikimedia Commons (liste complète dans `src/tableaux/CREDITS.txt`).
+- Texture du ciel : Freepik.
+
+L'histoire du Cercle, ses six nuits et ses personnages sont imaginaires.
 
 ## Licence
 
