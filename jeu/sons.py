@@ -14,6 +14,7 @@ import numpy as np
 import pygame
 
 R = 44100  # échantillons par seconde (pygame.mixer.pre_init l'impose dans app.py)
+CRETE = 0.7  # crête de chaque son : pygame additionne les canaux et sature au-delà de 1, il faut de la marge
 
 # ---------------------------------------------------------------------------
 # Outils
@@ -182,6 +183,7 @@ def pince(f, duree=1.5, clarte=0.6, graine=0):
     p = max(2, int(round(R / f)))
     lissage = max(1, int(1 + (1 - clarte) * 6))
     debut = np.convolve(np.random.default_rng(graine).uniform(-1, 1, p + lissage), np.ones(lissage) / lissage, "valid")[:p]
+    debut -= debut.mean()  # sans composante continue (sinon la corde « pousse » le haut-parleur)
     amort = math.exp(-p / (R * duree * 0.3))
     y = np.zeros(n + p)
     y[:p] = debut
@@ -304,11 +306,11 @@ def atterrissage(sol):
 def grondement(duree=1.8, graine=6):
     """La pierre qui gronde : bruit très grave, irrégulier, avec des craquements."""
     t = temps(duree)
-    fond = filtre(bruit(len(t), graine), haut=110, ordre=3) * 6
+    fond = filtre(bruit(len(t), graine), bas=45, haut=140, ordre=3) * 6
     craquements = filtre((np.random.default_rng(graine).random(len(t)) < 0.003) * bruit(len(t), graine + 1), bas=200, haut=1500) * 2
     houle = 0.6 + 0.4 * np.sin(2 * np.pi * 2.3 * t) * np.sin(2 * np.pi * 0.7 * t)
     env = np.clip(t / 0.15, 0, 1) * np.exp(-t / (duree * 0.45))
-    return reverb((fond * houle + craquements + 0.5 * np.sin(2 * np.pi * 38 * t)) * env, 2.5, 0.35, clair=2000)
+    return reverb((fond * houle + craquements + 0.4 * np.sin(2 * np.pi * 52 * t)) * env, 2.5, 0.35, clair=2000)
 
 
 def raclement(duree=2.2):
@@ -389,9 +391,9 @@ def coeur():
 
     def coup(f, d):
         return np.sin(2 * np.pi * np.cumsum(f * (1 + 0.5 * np.exp(-t / 0.02))) / R) * np.exp(-t / d) * (1 - np.exp(-t / 0.004))
-    onde = coup(52, 0.07)
-    onde[int(R * 0.17):] += 0.7 * coup(46, 0.08)[:len(t) - int(R * 0.17)]
-    return filtre(onde, haut=200)
+    onde = coup(66, 0.07)
+    onde[int(R * 0.17):] += 0.7 * coup(58, 0.08)[:len(t) - int(R * 0.17)]
+    return filtre(onde, haut=320)
 
 
 def radio():
@@ -420,7 +422,7 @@ def voix_sphinx():
     syllabes = [(0.1, 0.9, "m"), (0.9, 1.7, "o"), (1.8, 2.3, "a"), (2.35, 3.1, "u")]
     parole = voix(duree, lambda t: 62 + 6 * np.sin(2 * np.pi * 0.8 * t) - 8 * t / duree, syllabes, 0.05, 9)
     t = temps(duree)
-    return reverb(filtre(parole, haut=2500) * 3 + np.sin(2 * np.pi * 31 * t) * np.clip(t / 0.5, 0, 1) * np.clip((duree - t) / 0.4, 0, 1),
+    return reverb(filtre(parole, haut=2500) * 3 + 0.6 * np.sin(2 * np.pi * 55 * t) * np.clip(t / 0.5, 0, 1) * np.clip((duree - t) / 0.4, 0, 1),
                   3.0, 0.45, clair=2500)
 
 
@@ -605,9 +607,9 @@ def evenements(duree, nombre, son, graine, gain=(0.3, 1.0)):
 def ambiance_nuit():
     """Musée fermé : souffle grave de la ventilation, très loin un bourdonnement électrique."""
     duree = 16.0
-    air = boucle_bruit(duree, 70, lambda f: 1 / (1 + (f / 180) ** 2) / np.sqrt(f)) * 0.5
+    air = boucle_bruit(duree, 70, lambda f: 1 / (1 + (f / 300) ** 2) / (1 + (70 / f) ** 4) / np.sqrt(f)) * 0.5
     t = temps(duree)[:, None]
-    return air + 0.02 * np.sin(2 * np.pi * 50 * t) + 0.01 * np.sin(2 * np.pi * 100 * t)
+    return air + 0.015 * np.sin(2 * np.pi * 100 * t) + 0.008 * np.sin(2 * np.pi * 200 * t)
 
 
 def ambiance_pluie():
@@ -791,8 +793,15 @@ class Audio:
 
     def preparer(self):
         for nom, (fabrique, _) in EFFETS.items():
-            onde = fabrique()
-            self.pretes[nom] = onde if isinstance(onde, list) else [onde]
+            ondes = fabrique()
+            self.pretes[nom] = [self.convertir(o) for o in (ondes if isinstance(ondes, list) else [ondes])]
+
+    @staticmethod
+    def convertir(onde):
+        """Onde -> tableau 16 bits stéréo : sans infra-basses (inaudibles, elles font distordre les haut-parleurs)
+        ni composante continue, et avec de la marge sous la saturation."""
+        onde = filtre(stereo(np.asarray(onde, float)), bas=45)
+        return np.ascontiguousarray(normaliser(onde, CRETE) * 32767).astype(np.int16)
 
     def attendre(self):
         """Attend la fin de la préparation (pour les tests)."""
@@ -802,11 +811,7 @@ class Audio:
     def _sons(self, nom):
         """Les variantes d'un son, converties pour pygame à la première utilisation (None si pas encore prêt)."""
         if nom not in self.sounds and nom in self.pretes:
-            sons = []
-            for onde in self.pretes.pop(nom):
-                onde = (np.clip(normaliser(stereo(np.asarray(onde, float))), -1, 1) * 32767 * 0.9).astype(np.int16)
-                sons.append(pygame.sndarray.make_sound(np.ascontiguousarray(onde)))
-            self.sounds[nom] = sons
+            self.sounds[nom] = [pygame.sndarray.make_sound(onde) for onde in self.pretes.pop(nom)]
             self._regler(nom)
         return self.sounds.get(nom)
 
@@ -821,8 +826,8 @@ class Audio:
         for nom in self.sounds:
             self._regler(nom)
         if self.canaux_musique:
-            self.canaux_musique[self.courant].set_volume(self.volume * self.musique * 0.7)
-            self.canal_ambiance.set_volume(self.volume * 0.5)
+            self.canaux_musique[self.courant].set_volume(self.volume * self.musique * 0.6)
+            self.canal_ambiance.set_volume(self.volume * 0.4)
 
     def update(self):
         """À chaque image : démarre la musique ou l'ambiance demandée dès qu'elle est prête."""
@@ -834,13 +839,13 @@ class Audio:
             self.courant = 1 - self.courant
             if self.voulu:
                 canal = self.canaux_musique[self.courant]
+                canal.set_volume(self.volume * self.musique * 0.6)
                 canal.play(self.sounds["musique:" + self.voulu][0], loops=-1, fade_ms=2000)
-                canal.set_volume(self.volume * self.musique * 0.7)
         if self.ambiance_voulue != self.ambiance_nom and (self.ambiance_voulue is None or self._sons("ambiance:" + self.ambiance_voulue)):
             self.ambiance_nom = self.ambiance_voulue
             if self.ambiance_nom:
+                self.canal_ambiance.set_volume(self.volume * 0.4)
                 self.canal_ambiance.play(self.sounds["ambiance:" + self.ambiance_nom][0], loops=-1, fade_ms=1500)
-                self.canal_ambiance.set_volume(self.volume * 0.5)
             else:
                 self.canal_ambiance.fadeout(800)
 
@@ -855,22 +860,21 @@ class Audio:
         self.ambiance_voulue = nom
         self.update()
 
-    def play(self, nom, volume=1.0):
+    def play(self, nom, gauche=1.0, droite=None):
+        """Joue un son (une variante au hasard). Le volume du canal est réglé avant de jouer : sinon le début
+        du son part avec le volume et la position gauche/droite du son précédent sur ce canal."""
         sons = self._sons(nom) if self.canaux_musique else None
-        if not sons:
-            return None
-        canal = random.choice(sons).play()
-        if canal and volume != 1.0:
-            canal.set_volume(volume)
+        canal = pygame.mixer.find_channel() if sons else None
+        if canal:
+            canal.set_volume(min(1.0, gauche), min(1.0, gauche if droite is None else droite))
+            canal.play(random.choice(sons))
         return canal
 
     def pas(self, sol, force=1.0):
         """Un pas du joueur : sol "parquet", "marbre" ou "pierre" ; force 0.3 (accroupi) à 1.3 (course)."""
         self.pied = 1 - self.pied
-        canal = self.play("pas_" + sol)
-        if canal:
-            cote = 0.15 if self.pied else -0.15
-            canal.set_volume(min(1.0, force * (1 - cote)), min(1.0, force * (1 + cote)))
+        cote = 0.15 if self.pied else -0.15
+        self.play("pas_" + sol, force * (1 - cote), force * (1 + cote))
 
     def spatial(self, nom, position, ecoute, lacet, portee=14.0):
         """Son placé dans l'espace : plus faible au loin, plus fort dans l'oreille du bon côté.
@@ -885,9 +889,7 @@ class Audio:
         volume = (1 - distance / portee) ** 1.5 * (0.35 if doux else 1.0)
         a = math.radians(lacet)
         cote = (dx * -math.sin(a) + dz * math.cos(a)) / (distance or 1.0)  # > 0 : à droite
-        canal = self.play(nom)
-        if canal:
-            canal.set_volume(volume * min(1.0, 1 - cote), volume * min(1.0, 1 + cote))
+        self.play(nom, volume * min(1.0, 1 - cote), volume * min(1.0, 1 + cote))
 
     def boucle(self, nom, volume):
         """Boucle d'effet dont on règle le volume à chaque image (bourdonnement des lasers) ; 0 l'arrête."""
@@ -897,6 +899,6 @@ class Audio:
             self.canal_boucle.stop()
             return
         sons = self._sons("boucle:" + nom)
+        self.canal_boucle.set_volume(min(1.0, volume))
         if sons and not self.canal_boucle.get_busy():
             self.canal_boucle.play(sons[0], loops=-1)
-        self.canal_boucle.set_volume(min(1.0, volume))
