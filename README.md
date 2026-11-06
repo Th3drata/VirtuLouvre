@@ -1,131 +1,133 @@
 # VirtuLouvre
 
-**Six nuits pour sauver les trésors du Louvre.** VirtuLouvre est un jeu vidéo 3D écrit en Python (pygame-ce, OpenGL, NumPy) qui fonctionne sous **Windows, macOS et Linux**. On y joue une campagne de six missions dans six salles du musée : la galerie d'Apollon, reconstituée à partir d'un scan 3D, et cinq salles modélisées entièrement en code. Les tableaux accrochés aux murs sont les vrais, des reproductions du domaine public.
+**English** · [Français](README.fr.md)
 
-![Menu principal](docs/apercu_menu.jpg)
+**Six nights to save the treasures of the Louvre.** VirtuLouvre is a 3D video game written in Python (pygame-ce, OpenGL, NumPy) that runs on **Windows, macOS and Linux**. You play a campaign of six missions in six rooms of the museum: the Galerie d'Apollon, rebuilt from a 3D scan, and five rooms modeled entirely in code. The paintings on the walls are the real ones, public-domain reproductions. The game is in French.
 
-## La campagne : les nuits du Louvre
+![Main menu](docs/apercu_menu.jpg)
 
-Le 19 octobre 2025, huit joyaux de la Couronne ont été volés dans la galerie d'Apollon. Le jeu part de cet événement pour inventer une histoire : une bande de voleurs, le Cercle, frappe le musée nuit après nuit. Chaque nuit se joue dans une salle différente, avec sa propre mécanique.
+## The campaign: nights at the Louvre
 
-| Nuit | Salle | Mission | Ce qu'on fait |
+On 19 October 2025, eight of the French Crown Jewels were stolen from the Galerie d'Apollon. The game takes this event as a starting point to invent a story: a gang of thieves, the Circle (*le Cercle*), strikes the museum night after night. Each night takes place in a different room, with its own mechanic.
+
+| Night | Room | Mission | What you do |
 | --- | --- | --- | --- |
-| 1 | Galerie d'Apollon | Les joyaux de la Couronne | Fouiller la galerie dans le noir, à la lampe torche et au détecteur, pour retrouver les 8 joyaux |
-| 2 | Salle des États | Les indices de la Joconde | Examiner 6 indices autour de la Joconde, puis déduire le prochain coup du Cercle |
-| 3 | Grande Galerie | La poursuite | Rattraper un faux restaurateur qui s'enfuit avec *La Belle Ferronnière*, en gérant son souffle |
-| 4 | Salle des Cariatides | Le labyrinthe laser | Traverser des rayons fixes, balayants, tournants et clignotants (sauter, s'accroupir) |
-| 5 | Crypte du Sphinx | L'énigme du Sphinx | Répéter les séquences de hiéroglyphes du Sphinx pour ouvrir sa cachette |
-| 6 | Escalier Daru | La Victoire de Samothrace | S'infiltrer entre les guetteurs et leurs lampes, puis arrêter le chef du Cercle |
+| 1 | Galerie d'Apollon | The Crown Jewels | Search the gallery in the dark, with a flashlight and a detector, to find the 8 jewels |
+| 2 | Salle des États | The Mona Lisa clues | Examine 6 clues around the Mona Lisa, then work out the Circle's next move |
+| 3 | Grande Galerie | The chase | Catch a fake restorer running off with *La Belle Ferronnière*, while managing your stamina |
+| 4 | Salle des Cariatides | The laser maze | Get through fixed, sweeping, rotating and blinking beams (jump, crouch) |
+| 5 | Crypt of the Sphinx | The Sphinx's riddle | Repeat the Sphinx's hieroglyph sequences to open its hiding place |
+| 6 | Daru staircase | The Winged Victory of Samothrace | Sneak past the lookouts and their lamps, then arrest the Circle's leader |
 
-![Les six nuits](docs/apercu_nuits.jpg)
+![The six nights](docs/apercu_nuits.jpg)
 
-Chaque nuit réussie débloque la suivante sur la carte du musée, et rapporte de 1 à 3 étoiles selon le temps mis, les erreurs ou la discrétion. La progression et les records sont enregistrés.
+Each night you complete unlocks the next one on the museum map, and earns 1 to 3 stars depending on your time, mistakes or stealth. Progress and records are saved.
 
-![Carte de la campagne](docs/apercu_carte.jpg)
+![Campaign map](docs/apercu_carte.jpg)
 
-## Visite libre
+## Free tour
 
-Les six salles se visitent aussi librement, lumières allumées et pleines de monde : des visiteurs vont d'une œuvre à l'autre (certains prennent des photos, d'autres regardent leur téléphone), une foule se presse devant la Joconde, une guide montre les tableaux à son groupe, et un gardien surveille depuis sa chaise. On peut voler jusqu'aux plafonds et s'approcher des œuvres : quand on regarde un tableau ou une statue, son cartel s'affiche (titre, artiste, date).
+All six rooms can also be explored freely, lights on and full of people: visitors walk from one artwork to the next (some take photos, others look at their phones), a crowd gathers in front of the Mona Lisa, a guide shows the paintings to her group, and a guard keeps watch from his chair. You can fly up to the ceilings and get close to the artworks: when you look at a painting or a statue, its label appears (title, artist, date).
 
-## Personnages et sons
+## Characters and sound
 
-Tous les personnages sont modélisés et animés en code : gardiens, policiers, voleurs, guetteurs cagoulés, chef du Cercle, conservatrice, guide, et des visiteurs tirés au hasard (visage, peau, coiffure, barbe, lunettes, casquette, béret, sac à dos, audioguide, jupe, manches courtes...). Leur squelette a des genoux, des coudes et une tête qui tourne : ils marchent, courent, lèvent les mains, croisent les bras, s'assoient, pointent un tableau et vous suivent du regard quand vous passez.
+All the characters are modeled and animated in code: guards, police officers, thieves, hooded lookouts, the Circle's leader, a curator, a guide, and randomly generated visitors (face, skin, hairstyle, beard, glasses, cap, beret, backpack, audio guide, skirt, short sleeves...). Their skeleton has knees, elbows and a head that turns: they walk, run, raise their hands, cross their arms, sit down, point at a painting and follow you with their eyes as you walk by.
 
-Aucun fichier audio : tout est synthétisé au lancement, en arrière-plan. Il y a une musique par nuit (piano pour le menu, pizzicati pour l'enquête, batterie pour la poursuite, arpèges électroniques pour les lasers, harpe orientale pour le Sphinx, pouls sourd pour l'infiltration), des ambiances (pluie sur la verrière, vent et braseros de la crypte, murmure de la foule), des pas qui changent selon le sol (parquet, marbre, pierre), et des bruitages : sonar du détecteur, tintement des joyaux, sifflet, sonnerie d'alarme, menottes, talkie-walkie des guetteurs, battements de cœur quand on est presque repéré, voix du Sphinx...
+No audio files: everything is synthesized at startup, in the background. Each night has its own music (piano for the menu, pizzicato for the investigation, drums for the chase, electronic arpeggios for the lasers, an oriental harp for the Sphinx, a muffled pulse for the infiltration), ambiences (rain on the glass roof, wind and braziers in the crypt, the murmur of the crowd), footsteps that change with the floor (parquet, marble, stone), and sound effects: the detector's sonar, the jingle of the jewels, a whistle, the alarm bell, handcuffs, the lookouts' walkie-talkies, a heartbeat when you are about to be spotted, the voice of the Sphinx...
 
-## Lancer le jeu
+## Running the game
 
-Il faut **Python 3.9 ou plus récent** ([python.org](https://www.python.org/downloads/)). Le premier lancement installe les dépendances dans un dossier `.venv`, ce qui prend une minute ; les suivants démarrent tout de suite.
+You need **Python 3.9 or later** ([python.org](https://www.python.org/downloads/)). The first launch installs the dependencies in a `.venv` folder, which takes about a minute; later launches start right away.
 
-| Système | Comment lancer |
+| System | How to launch |
 | --- | --- |
-| Windows | Double-clic sur `lancer.bat` (pendant l'installation de Python, coche « Add python.exe to PATH ») |
-| macOS | Double-clic sur `lancer.command`. La première fois, si macOS le bloque : clic droit, puis « Ouvrir » |
-| Linux | `./lancer.command` dans un terminal (sur Debian/Ubuntu, il faut le paquet `python3-venv`) |
+| Windows | Double-click `lancer.bat` (when installing Python, check "Add python.exe to PATH") |
+| macOS | Double-click `lancer.command`. The first time, if macOS blocks it: right-click, then "Open" |
+| Linux | `./lancer.command` in a terminal (on Debian/Ubuntu you need the `python3-venv` package) |
 
-### Installation manuelle
+### Manual installation
 
 ```bash
-python3 -m venv .venv                                 # Windows : py -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt   # Windows : .venv\Scripts\python ...
+python3 -m venv .venv                                 # Windows: py -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt   # Windows: .venv\Scripts\python ...
 .venv/bin/python main.py
 ```
 
-### En cas de problème
+### Troubleshooting
 
-- **`pygame` et `pygame-ce` en même temps** : les deux s'installent dans le même dossier `pygame` et se marchent dessus. Fais `pip uninstall pygame pygame-ce`, puis `pip install -r requirements.txt`. Le jeu te le signale au démarrage.
-- **Carte graphique** : il faut OpenGL 2.0 (toutes les cartes depuis 2004). Sans pilote graphique (machine virtuelle sans 3D, « Carte graphique de base Microsoft »), le jeu affiche un message au lieu de démarrer. Sous Linux, il faut les pilotes Mesa (`sudo apt install libgl1` sur Debian/Ubuntu).
-- **Pas de son** : le jeu continue en silence si l'ordinateur n'a pas de sortie audio.
+- **`pygame` and `pygame-ce` installed together**: both install into the same `pygame` folder and conflict. Run `pip uninstall pygame pygame-ce`, then `pip install -r requirements.txt`. The game warns you about this at startup.
+- **Graphics card**: OpenGL 2.0 is required (every card since 2004). Without a graphics driver (a virtual machine without 3D, "Microsoft Basic Display Adapter"), the game shows a message instead of starting. On Linux, you need the Mesa drivers (`sudo apt install libgl1` on Debian/Ubuntu).
+- **No sound**: the game keeps running silently if the computer has no audio output.
 
-## Commandes
+## Controls
 
-| Touche | Action |
+| Key | Action |
 | --- | --- |
-| Z Q S D, W A S D ou flèches | Se déplacer (AZERTY et QWERTY marchent tous les deux) |
-| Souris | Regarder |
-| Maj | Courir (attention au souffle pendant la poursuite) |
-| Espace | Sauter / monter en vol |
-| C | S'accroupir (plus discret, passe sous les lasers) / descendre en vol |
-| E | Examiner, agir (indices, symboles, alarme, arrestation...) |
-| F | Allumer / éteindre la lampe torche |
-| G | Voler / atterrir (visite libre) |
-| Échap | Pause / retour |
-| F11 ou Alt+Entrée | Plein écran (sur Mac, F11 règle le volume : utilise Option+Entrée) |
-| F12 | Capture d'écran (dossier `captures/`) |
+| Z Q S D, W A S D or arrow keys | Move (both AZERTY and QWERTY work) |
+| Mouse | Look around |
+| Shift | Run (watch your stamina during the chase) |
+| Space | Jump / fly up |
+| C | Crouch (stealthier, gets under the lasers) / fly down |
+| E | Examine, interact (clues, symbols, alarm, arrest...) |
+| F | Turn the flashlight on / off |
+| G | Fly / land (free tour) |
+| Esc | Pause / back |
+| F11 or Alt+Enter | Fullscreen (on a Mac, F11 controls the volume: use Option+Enter) |
+| F12 | Screenshot (`captures/` folder) |
 
-Toutes les touches (sauf Échap, F11, F12 et les flèches) se changent dans **Paramètres > Touches**. Les réglages et la progression sont enregistrés dans `config/settings.json`. Pour recommencer la campagne depuis le début : **Paramètres > Partie > Réinitialiser la progression**.
+Every key (except Esc, F11, F12 and the arrow keys) can be remapped in **Paramètres > Touches** (Settings > Keys). Settings and progress are saved in `config/settings.json`. To restart the campaign from the beginning: **Paramètres > Partie > Réinitialiser la progression** (Settings > Game > Reset progress).
 
-## Structure du projet
+## Project structure
 
 ```
 VirtuLouvre/
-├── main.py              # Point d'entrée (et auto-test : python main.py --test)
-├── jeu/                 # Le jeu
-│   ├── app.py           # Boucle principale, rendu, écrans (menu, carte, briefing, pause, fin...)
-│   ├── missions.py      # Les six nuits de la campagne
-│   ├── salles.py        # Les six salles : géométrie, collisions, lumières, œuvres
-│   ├── modeles.py       # Modèles 3D construits en code : personnages, statues, joyaux, mobilier
-│   ├── acteurs.py       # Le joueur, les personnages (patrouilles, vision, squelette, poses) et la foule
-│   ├── rendu.py         # OpenGL : textures procédurales, maillages, éclairage, effets
-│   ├── interface.py     # Interface 2D (boutons, textes, curseurs)
-│   ├── sons.py          # Sons, musiques et ambiances synthétisés avec NumPy
-│   └── base.py          # Constantes, réglages, petits outils de calcul
+├── main.py              # Entry point (and self-test: python main.py --test)
+├── jeu/                 # The game
+│   ├── app.py           # Main loop, rendering, screens (menu, map, briefing, pause, ending...)
+│   ├── missions.py      # The six nights of the campaign
+│   ├── salles.py        # The six rooms: geometry, collisions, lights, artworks
+│   ├── modeles.py       # 3D models built in code: characters, statues, jewels, furniture
+│   ├── acteurs.py       # The player, the characters (patrols, vision, skeleton, poses) and the crowd
+│   ├── rendu.py         # OpenGL: procedural textures, meshes, lighting, effects
+│   ├── interface.py     # 2D interface (buttons, text, sliders)
+│   ├── sons.py          # Sounds, music and ambiences synthesized with NumPy
+│   └── base.py          # Constants, settings, small math helpers
 ├── src/
-│   ├── models/          # Scan 3D de la galerie d'Apollon (.obj)
-│   ├── tableaux/        # Reproductions d'œuvres du domaine public (voir CREDITS.txt)
-│   ├── textures/        # Texture du scan, parquet, ciel
-│   ├── media/           # Vidéo des premiers prototypes
-│   └── icons/           # Icônes de l'interface
-├── config/              # Réglages et progression du joueur
-├── docs/                # Aperçus pour ce README
-├── lancer.bat           # Lanceur Windows
-├── lancer.command       # Lanceur macOS / Linux
-├── dependances/         # Anciens installeurs (Windows .exe, script shell)
-└── Tests/               # Prototypes de l'équipe
+│   ├── models/          # 3D scan of the Galerie d'Apollon (.obj)
+│   ├── tableaux/        # Reproductions of public-domain artworks (see CREDITS.txt)
+│   ├── textures/        # Scan texture, parquet, sky
+│   ├── media/           # Video of the first prototypes
+│   └── icons/           # Interface icons
+├── config/              # Player settings and progress
+├── docs/                # Previews for this README
+├── lancer.bat           # Windows launcher
+├── lancer.command       # macOS / Linux launcher
+├── dependances/         # Old installers (Windows .exe, shell script)
+└── Tests/               # The team's prototypes
 ```
 
-## Documentation technique
+## Technical documentation
 
-- **Salles (`salles.py`)** : un constructeur assemble sols, murs à portes, voûtes en berceau, colonnes cannelées, escaliers et tableaux encadrés. Chaque surface est découpée en petits carreaux, parce que l'éclairage OpenGL « classique » est calculé aux sommets et qu'une grande face resterait uniforme. En même temps, il remplit trois cartes vues de dessus : les cases infranchissables, la hauteur du sol (pour les escaliers) et la hauteur des obstacles qui cachent la vue (pour savoir si un guetteur voit le joueur derrière une caisse). La galerie d'Apollon vient d'un scan 3D ; sa carte des collisions est calculée à partir de la matière du scan à hauteur du corps.
-- **Modèles (`modeles.py`)** : tout est construit à partir de formes simples (boîtes, surfaces de révolution, tores, tubes le long d'une courbe, pierres taillées, prismes). Les personnages ont dix parties (buste, tête, cuisses, jambes, bras, avant-bras) et une tenue tirée d'une graine : un même visiteur a toujours la même allure. Les couleurs de peau et de vêtements sont des matériaux « rgb:r,g,b » créés à la volée.
-- **Textures (`rendu.py`)** : marbre, pierre de taille, dallages, caissons, hiéroglyphes... sont calculés au lancement avec NumPy. Ils utilisent un bruit périodique (une somme de sinusoïdes de fréquences entières), pour que la texture se répète sans raccord visible.
-- **Personnages (`acteurs.py`)** : un squelette simple (bassin, hanches, genoux, épaules, coudes, cou) dont les angles viennent de la marche, de la course et des poses. La même chaîne de transformations sert à dessiner (OpenGL) et à calculer où pointe la lampe d'un guetteur (NumPy). Patrouilles avec pauses, champ de vision (portée, angle, obstacles), réaction aux bruits de course. Les visiteurs choisissent une œuvre proche qu'ils peuvent rejoindre en ligne droite, la regardent un moment, puis repartent ; on ne peut pas les traverser.
-- **Missions (`missions.py`)** : chaque mission prépare la salle, fait avancer sa logique à chaque image, propose des interactions (touche E) et dessine son morceau d'interface. Les lasers utilisent la distance entre deux segments (le rayon et le corps du joueur).
-- **Sons (`sons.py`)** : une petite boîte à outils de synthèse. Synthèse additive (cloches, verre, marimba, piano avec ses partiels légèrement désaccordés, cuivres dont les aigus montent avec le souffle), cordes pincées de Karplus-Strong (harpe, pizzicati), voix par formants (murmure de la foule, talkie-walkie, Sphinx), bruit filtré dans le domaine de Fourier (pas, pluie, pierre qui racle), réverbération par convolution avec une réponse de salle stéréo. Les musiques et ambiances bouclent sans clic : les notes qui dépassent de la fin reviennent au début, et l'écho est une convolution circulaire. Tout est calculé dans un fil d'exécution séparé pendant qu'on regarde le menu.
+- **Rooms (`salles.py`)**: a builder assembles floors, walls with doorways, barrel vaults, fluted columns, staircases and framed paintings. Every surface is split into small tiles, because "classic" OpenGL lighting is computed per vertex and a large face would stay uniform. At the same time, it fills three top-down maps: impassable cells, floor height (for staircases) and the height of obstacles that block the view (to know whether a lookout can see the player behind a crate). The Galerie d'Apollon comes from a 3D scan; its collision map is computed from the scan's geometry at body height.
+- **Models (`modeles.py`)**: everything is built from simple shapes (boxes, surfaces of revolution, tori, tubes along a curve, cut stones, prisms). Characters have ten parts (torso, head, thighs, legs, upper arms, forearms) and an outfit drawn from a seed: a given visitor always looks the same. Skin and clothing colors are "rgb:r,g,b" materials created on the fly.
+- **Textures (`rendu.py`)**: marble, ashlar stone, floor tiles, coffered ceilings, hieroglyphs... are computed at startup with NumPy. They use periodic noise (a sum of sine waves with integer frequencies), so the texture repeats without a visible seam.
+- **Characters (`acteurs.py`)**: a simple skeleton (pelvis, hips, knees, shoulders, elbows, neck) whose angles come from walking, running and poses. The same chain of transformations is used to draw (OpenGL) and to compute where a lookout's lamp points (NumPy). Patrols with pauses, field of view (range, angle, obstacles), reaction to the sound of running. Visitors pick a nearby artwork they can reach in a straight line, look at it for a while, then move on; you can't walk through them.
+- **Missions (`missions.py`)**: each mission sets up the room, advances its logic every frame, offers interactions (E key) and draws its part of the interface. The lasers use the distance between two segments (the beam and the player's body).
+- **Sound (`sons.py`)**: a small synthesis toolkit. Additive synthesis (bells, glass, marimba, piano with slightly detuned partials, brass whose high harmonics rise with the breath), Karplus-Strong plucked strings (harp, pizzicato), formant voices (crowd murmur, walkie-talkie, Sphinx), noise filtered in the Fourier domain (footsteps, rain, scraping stone), convolution reverb with a stereo room response. Music and ambiences loop without clicks: notes that run past the end wrap around to the beginning, and the echo is a circular convolution. Everything is computed in a separate thread while you are on the menu.
 
-L'auto-test (`python main.py --test`, sans fenêtre) vérifie les réglages, les modèles et les salles. Il vérifie aussi que chaque joyau est accessible, que l'escalier se monte, qu'un robot qui gère son souffle arrive à rattraper le voleur de la nuit 3, que les visiteurs ne traversent pas les murs, que la lampe des guetteurs éclaire devant eux, et que chaque son se fabrique sans erreur.
+The self-test (`python main.py --test`, no window) checks the settings, the models and the rooms. It also checks that every jewel can be reached, that the staircase can be climbed, that a bot managing its stamina can catch the night-3 thief, that visitors don't walk through walls, that the lookouts' lamps light up what's in front of them, and that every sound is generated without errors.
 
-## Crédits
+## Credits
 
-Développé par **Albert Oscar**, **Moors Michel** et **Rinckenbach Yann** dans le cadre des Trophées NSI.
+Developed by **Albert Oscar**, **Moors Michel** and **Rinckenbach Yann** for the Trophées NSI (a French national high-school computer science competition).
 
-- Galerie d'Apollon : scan 3D de la galerie.
-- Salles, personnages, statues et joyaux : modélisés en code. Ce sont des évocations libres des vraies salles, et les joyaux des interprétations des originaux.
-- Tableaux : reproductions du domaine public, via Wikimedia Commons (liste complète dans `src/tableaux/CREDITS.txt`).
-- Texture du ciel : Freepik.
+- Galerie d'Apollon: 3D scan of the gallery.
+- Rooms, characters, statues and jewels: modeled in code. They are loose interpretations of the real rooms, and the jewels are interpretations of the originals.
+- Paintings: public-domain reproductions, via Wikimedia Commons (full list in `src/tableaux/CREDITS.txt`).
+- Sky texture: Freepik.
 
-L'histoire du Cercle, ses six nuits et ses personnages sont imaginaires.
+The story of the Circle, its six nights and its characters are fictional.
 
-## Licence
+## License
 
-Ce projet est sous licence GPL v3+. Voir le fichier `licence.txt`.
+This project is licensed under the GPL v3+. See the `licence.txt` file.
